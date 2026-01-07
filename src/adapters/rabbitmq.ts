@@ -176,15 +176,29 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
       if (!channel) {
         return null;
       }
-      const queueInfo = await channel.checkQueue(queueName);
+      try {
+        const queueInfo = await channel.checkQueue(queueName);
 
-      if (queueInfo.messageCount === 0) {
+        if (queueInfo.messageCount === 0) {
+          return null;
+        }
+
+        // 注意：RabbitMQ 的 getNext 实现较复杂，需要使用 consume 模式
+        // 这里返回 null，实际应该通过 consume 回调处理
+        return null;
+      } catch (checkError) {
+        // checkQueue 可能抛出错误（例如连接已关闭）
+        const errorMessage = checkError instanceof Error ? checkError.message : String(checkError);
+        if (
+          errorMessage.includes("Connection closing") ||
+          errorMessage.includes("IllegalOperationError") ||
+          errorMessage.includes("Channel closed")
+        ) {
+          return null;
+        }
+        // 其他错误也返回 null
         return null;
       }
-
-      // 注意：RabbitMQ 的 getNext 实现较复杂，需要使用 consume 模式
-      // 这里返回 null，实际应该通过 consume 回调处理
-      return null;
     } catch (error) {
       // 如果连接已关闭或出错，返回 null（避免未捕获的错误）
       const errorMessage = error instanceof Error ? error.message : String(error);

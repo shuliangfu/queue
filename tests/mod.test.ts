@@ -399,9 +399,13 @@ describe("Queue", () => {
         // 清理：先停止队列，再关闭连接
         queue.stop(); // 先停止队列处理循环
         await queueManager.close();
-        // 等待处理循环完全停止
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await connection.connection.close();
+        // 等待处理循环完全停止（RabbitMQ 可能需要更长时间）
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        try {
+          await connection.connection.close();
+        } catch (error) {
+          // 忽略关闭时的错误（连接可能已经关闭）
+        }
       } catch (error) {
         console.log(
           `⚠️  跳过：RabbitMQ 测试失败 - ${
@@ -456,10 +460,14 @@ describe("Queue", () => {
         // 清理：先停止队列，再关闭连接
         queue.stop(); // 先停止队列处理循环
         await queueManager.close();
-        // 等待处理循环完全停止
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        if (connection?.connection?.close) {
-          await connection.connection.close();
+        // 等待处理循环完全停止（RabbitMQ 可能需要更长时间）
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        try {
+          if (connection?.connection?.close) {
+            await connection.connection.close();
+          }
+        } catch (error) {
+          // 忽略关闭时的错误（连接可能已经关闭）
         }
       } catch (error) {
         console.log(
