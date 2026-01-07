@@ -204,7 +204,11 @@ export class Queue {
             break;
           }
           // 否则记录错误并继续
-          console.error(`获取任务失败: ${error instanceof Error ? error.message : String(error)}`);
+          console.error(
+            `获取任务失败: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
           await new Promise((resolve) => setTimeout(resolve, 100));
           continue;
         }
@@ -223,7 +227,11 @@ export class Queue {
         if (!this.running) {
           break;
         }
-        console.error(`处理循环错误: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(
+          `处理循环错误: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
@@ -361,7 +369,10 @@ export class QueueManager {
   private recoveryIntervalId?: number;
   private scheduledTasks: Map<string, ScheduleOptions> = new Map();
   private scheduledHandlers: Map<string, ScheduledTaskHandler> = new Map();
-  private cronTasks: Map<string, { signal: AbortController; intervalId?: number }> = new Map();
+  private cronTasks: Map<
+    string,
+    { signal: AbortController; intervalId?: number }
+  > = new Map();
 
   constructor(options: QueueManagerOptions) {
     if (!options.adapter) {

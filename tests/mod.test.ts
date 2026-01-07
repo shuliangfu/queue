@@ -3,11 +3,7 @@
  */
 
 import { describe, expect, it } from "jsr:@dreamer/test@^1.0.0-alpha.1";
-import {
-  MemoryQueueAdapter,
-  QueueManager,
-  type QueueAdapter,
-} from "../src/mod.ts";
+import { MemoryQueueAdapter, QueueManager } from "../src/mod.ts";
 
 /**
  * 检查 Docker 容器是否运行
@@ -60,7 +56,9 @@ async function createRedisClient() {
     };
   } catch (error) {
     throw new Error(
-      `无法创建 Redis 客户端: ${error instanceof Error ? error.message : String(error)}`,
+      `无法创建 Redis 客户端: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
 }
@@ -72,7 +70,8 @@ async function createRabbitMQConnection() {
   try {
     // 尝试使用 npm:amqplib
     const amqp = await import("npm:amqplib@^0.10.0");
-    const connection = await amqp.default.connect("amqp://localhost");
+    // RabbitMQ 默认用户名和密码是 guest/guest
+    const connection = await amqp.default.connect("amqp://guest:guest@localhost");
 
     return {
       connection: {
@@ -128,7 +127,9 @@ async function createRabbitMQConnection() {
     };
   } catch (error) {
     throw new Error(
-      `无法创建 RabbitMQ 连接: ${error instanceof Error ? error.message : String(error)}`,
+      `无法创建 RabbitMQ 连接: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
 }
@@ -179,7 +180,9 @@ describe("Queue", () => {
       const isRunning = await checkDockerContainer("redis");
       if (!isRunning) {
         console.log("⚠️  Redis 容器未运行，跳过 Redis 测试");
-        console.log("   启动 Redis: docker run -d -p 6379:6379 --name redis redis:latest");
+        console.log(
+          "   启动 Redis: docker run -d -p 6379:6379 --name redis redis:latest",
+        );
         return;
       }
       expect(isRunning).toBeTruthy();
@@ -272,7 +275,10 @@ describe("Queue", () => {
         const { RedisQueueAdapter } = await import("../src/adapters/redis.ts");
         const redisAdapter = new RedisQueueAdapter({ client });
 
-        const queueManager = new QueueManager({ adapter: redisAdapter, autoRecover: false });
+        const queueManager = new QueueManager({
+          adapter: redisAdapter,
+          autoRecover: false,
+        });
         const queue = queueManager.createQueue("test-redis-process", {
           concurrency: 1,
         });
@@ -426,7 +432,10 @@ describe("Queue", () => {
           queueOptions: { durable: true },
         });
 
-        const queueManager = new QueueManager({ adapter: rabbitMQAdapter, autoRecover: false });
+        const queueManager = new QueueManager({
+          adapter: rabbitMQAdapter,
+          autoRecover: false,
+        });
         const queue = queueManager.createQueue("test-rabbitmq-process", {
           concurrency: 1,
         });

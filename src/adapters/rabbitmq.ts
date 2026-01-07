@@ -89,7 +89,13 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
    * 初始化通道
    */
   private async init(): Promise<void> {
-    this.channel = await this.connection.createChannel();
+    try {
+      this.channel = await this.connection.createChannel();
+    } catch (error) {
+      // 如果连接已关闭，清除 channel
+      this.channel = undefined;
+      throw error;
+    }
   }
 
   /**
@@ -97,7 +103,20 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
    */
   private async ensureChannel() {
     if (!this.channel) {
-      await this.init();
+      try {
+        await this.init();
+      } catch (error) {
+        // 如果初始化失败（例如连接已关闭），返回 undefined
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (
+          errorMessage.includes("Connection closing") ||
+          errorMessage.includes("IllegalOperationError") ||
+          errorMessage.includes("Channel closed")
+        ) {
+          return undefined;
+        }
+        throw error;
+      }
     }
     return this.channel!;
   }
@@ -133,16 +152,33 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
   async getNext(queueName: string): Promise<Job | null> {
     // RabbitMQ 使用消费模式，这里简化实现
     // 实际应该使用 consume 模式
-    const channel = await this.ensureChannel();
-    const queueInfo = await channel.checkQueue(queueName);
+    try {
+      const channel = await this.ensureChannel();
+      if (!channel) {
+        return null;
+      }
+      const queueInfo = await channel.checkQueue(queueName);
 
-    if (queueInfo.messageCount === 0) {
+      if (queueInfo.messageCount === 0) {
+        return null;
+      }
+
+      // 注意：RabbitMQ 的 getNext 实现较复杂，需要使用 consume 模式
+      // 这里返回 null，实际应该通过 consume 回调处理
+      return null;
+    } catch (error) {
+      // 如果连接已关闭或出错，返回 null（避免未捕获的错误）
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (
+        errorMessage.includes("Connection closing") ||
+        errorMessage.includes("IllegalOperationError") ||
+        errorMessage.includes("Channel closed")
+      ) {
+        return null;
+      }
+      // 其他错误也返回 null，避免中断处理循环
       return null;
     }
-
-    // 注意：RabbitMQ 的 getNext 实现较复杂，需要使用 consume 模式
-    // 这里返回 null，实际应该通过 consume 回调处理
-    return null;
   }
 
   async update(jobId: string, updates: Partial<Job>): Promise<void> {
