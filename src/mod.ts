@@ -192,13 +192,6 @@ export class Queue {
         // 检查并发限制
         if (this.processing.size >= this.concurrency) {
           if (!this.running) break;
-          const timeoutId = setTimeout(() => {
-            // 在回调中检查 running 状态
-            if (!this.running) {
-              this.pendingTimeouts.delete(timeoutId as unknown as number);
-            }
-          }, 100) as unknown as number;
-          this.pendingTimeouts.add(timeoutId);
           await new Promise((resolve) => {
             const id = setTimeout(() => {
               this.pendingTimeouts.delete(id as unknown as number);
@@ -227,12 +220,6 @@ export class Queue {
             }`,
           );
           if (!this.running) break;
-          const timeoutId = setTimeout(() => {
-            if (!this.running) {
-              this.pendingTimeouts.delete(timeoutId as unknown as number);
-            }
-          }, 100) as unknown as number;
-          this.pendingTimeouts.add(timeoutId);
           await new Promise((resolve) => {
             const id = setTimeout(() => {
               this.pendingTimeouts.delete(id as unknown as number);
@@ -248,12 +235,6 @@ export class Queue {
 
         if (!job) {
           if (!this.running) break;
-          const timeoutId = setTimeout(() => {
-            if (!this.running) {
-              this.pendingTimeouts.delete(timeoutId as unknown as number);
-            }
-          }, 100) as unknown as number;
-          this.pendingTimeouts.add(timeoutId);
           await new Promise((resolve) => {
             const id = setTimeout(() => {
               this.pendingTimeouts.delete(id as unknown as number);
@@ -280,12 +261,6 @@ export class Queue {
           }`,
         );
         if (!this.running) break;
-        const timeoutId = setTimeout(() => {
-          if (!this.running) {
-            this.pendingTimeouts.delete(timeoutId as unknown as number);
-          }
-        }, 100) as unknown as number;
-        this.pendingTimeouts.add(timeoutId);
         await new Promise((resolve) => {
           const id = setTimeout(() => {
             this.pendingTimeouts.delete(id as unknown as number);
