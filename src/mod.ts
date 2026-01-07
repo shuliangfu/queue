@@ -125,6 +125,7 @@ export class Queue {
   private running: boolean = false;
   private processing: Set<string> = new Set();
   private intervalId?: number;
+  private pendingTimeouts: Set<number> = new Set(); // 跟踪所有待处理的定时器
 
   constructor(name: string, adapter: QueueAdapter, options: QueueOptions) {
     this.name = name;
@@ -190,13 +191,29 @@ export class Queue {
       try {
         // 检查并发限制
         if (this.processing.size >= this.concurrency) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          if (!this.running) break;
+          const timeoutId = setTimeout(() => {
+            // 在回调中检查 running 状态
+            if (!this.running) {
+              this.pendingTimeouts.delete(timeoutId as unknown as number);
+            }
+          }, 100) as unknown as number;
+          this.pendingTimeouts.add(timeoutId);
+          await new Promise((resolve) => {
+            const id = setTimeout(() => {
+              this.pendingTimeouts.delete(id as unknown as number);
+              resolve(undefined);
+            }, 100) as unknown as number;
+            this.pendingTimeouts.add(id);
+          });
+          if (!this.running) break;
           continue;
         }
 
         // 获取下一个任务（可能因为适配器关闭而失败）
         let job: Job | null = null;
         try {
+          if (!this.running) break;
           job = await this.adapter.getNext(this.name);
         } catch (error) {
           // 如果适配器已关闭或出错，停止处理循环
@@ -209,12 +226,42 @@ export class Queue {
               error instanceof Error ? error.message : String(error)
             }`,
           );
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          if (!this.running) break;
+          const timeoutId = setTimeout(() => {
+            if (!this.running) {
+              this.pendingTimeouts.delete(timeoutId as unknown as number);
+            }
+          }, 100) as unknown as number;
+          this.pendingTimeouts.add(timeoutId);
+          await new Promise((resolve) => {
+            const id = setTimeout(() => {
+              this.pendingTimeouts.delete(id as unknown as number);
+              resolve(undefined);
+            }, 100) as unknown as number;
+            this.pendingTimeouts.add(id);
+          });
+          if (!this.running) break;
           continue;
         }
 
+        if (!this.running) break;
+
         if (!job) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          if (!this.running) break;
+          const timeoutId = setTimeout(() => {
+            if (!this.running) {
+              this.pendingTimeouts.delete(timeoutId as unknown as number);
+            }
+          }, 100) as unknown as number;
+          this.pendingTimeouts.add(timeoutId);
+          await new Promise((resolve) => {
+            const id = setTimeout(() => {
+              this.pendingTimeouts.delete(id as unknown as number);
+              resolve(undefined);
+            }, 100) as unknown as number;
+            this.pendingTimeouts.add(id);
+          });
+          if (!this.running) break;
           continue;
         }
 
@@ -232,7 +279,21 @@ export class Queue {
             error instanceof Error ? error.message : String(error)
           }`,
         );
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        if (!this.running) break;
+        const timeoutId = setTimeout(() => {
+          if (!this.running) {
+            this.pendingTimeouts.delete(timeoutId as unknown as number);
+          }
+        }, 100) as unknown as number;
+        this.pendingTimeouts.add(timeoutId);
+        await new Promise((resolve) => {
+          const id = setTimeout(() => {
+            this.pendingTimeouts.delete(id as unknown as number);
+            resolve(undefined);
+          }, 100) as unknown as number;
+          this.pendingTimeouts.add(id);
+        });
+        if (!this.running) break;
       }
     }
   }
@@ -253,7 +314,12 @@ export class Queue {
       if (job.timeout) {
         timeoutId = setTimeout(() => {
           this.handleJobTimeout(job);
-        }, job.timeout);
+          // 超时触发后清理
+          if (timeoutId !== undefined) {
+            this.pendingTimeouts.delete(timeoutId);
+          }
+        }, job.timeout) as unknown as number;
+        this.pendingTimeouts.add(timeoutId);
       }
 
       // 执行任务
@@ -261,6 +327,7 @@ export class Queue {
 
       if (timeoutId) {
         clearTimeout(timeoutId);
+        this.pendingTimeouts.delete(timeoutId);
       }
 
       // 标记为完成
@@ -321,7 +388,13 @@ export class Queue {
     this.running = false;
     if (this.intervalId) {
       clearInterval(this.intervalId);
+      this.intervalId = undefined;
     }
+    // 清理所有待处理的定时器
+    for (const timeoutId of this.pendingTimeouts) {
+      clearTimeout(timeoutId);
+    }
+    this.pendingTimeouts.clear();
   }
 
   /**
