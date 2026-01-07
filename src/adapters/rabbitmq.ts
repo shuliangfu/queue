@@ -123,14 +123,16 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         if (
           errorMessage.includes("Connection closing") ||
           errorMessage.includes("IllegalOperationError") ||
-          errorMessage.includes("Channel closed")
+          errorMessage.includes("Channel closed") ||
+          errorMessage.includes("The client is closed")
         ) {
           return undefined;
         }
-        throw error;
+        // 其他错误也返回 undefined，避免抛出未捕获的异常
+        return undefined;
       }
     }
-    return this.channel!;
+    return this.channel;
   }
 
   /**

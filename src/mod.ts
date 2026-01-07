@@ -213,12 +213,19 @@ export class Queue {
           if (!this.running) {
             break;
           }
-          // 否则记录错误并继续
-          console.error(
-            `获取任务失败: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          );
+          // 检查是否是连接关闭错误，如果是则静默处理（不输出错误日志）
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (
+            !errorMessage.includes("The client is closed") &&
+            !errorMessage.includes("Connection closing") &&
+            !errorMessage.includes("IllegalOperationError") &&
+            !errorMessage.includes("Channel closed")
+          ) {
+            // 只有非连接关闭错误才记录
+            console.error(
+              `获取任务失败: ${errorMessage}`,
+            );
+          }
           if (!this.running) break;
           await new Promise((resolve) => {
             const id = setTimeout(() => {
@@ -367,6 +374,7 @@ export class Queue {
     }
     // 清理所有待处理的定时器
     for (const timeoutId of this.pendingTimeouts) {
+      console.log("清理待处理的定时器.......................", timeoutId);
       clearTimeout(timeoutId);
     }
     this.pendingTimeouts.clear();
