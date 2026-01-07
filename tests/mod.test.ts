@@ -75,6 +75,12 @@ async function createRabbitMQConnection() {
       "amqp://guest:guest@localhost",
     );
 
+    // 添加错误处理器，捕获连接关闭时的错误（避免未捕获的异常）
+    connection.on("error", (_error: any) => {
+      // 静默处理连接错误（在测试清理时是正常的）
+      // 这些错误来自 amqplib 库内部的事件处理，我们无法直接控制
+    });
+
     return {
       connection: {
         createChannel: async () => {

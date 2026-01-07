@@ -189,6 +189,18 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         return null;
       }
       try {
+        // 先尝试声明队列（如果不存在则创建，如果存在则获取信息）
+        // 这样可以避免 checkQueue 在队列不存在时抛出错误
+        try {
+          await channel.assertQueue(queueName, {
+            durable: this.queueOptions.durable,
+          });
+        } catch (assertError) {
+          // 如果声明队列失败，返回 null
+          return null;
+        }
+
+        // 然后检查队列信息
         const queueInfo = await channel.checkQueue(queueName);
 
         if (queueInfo.messageCount === 0) {
@@ -200,32 +212,12 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         return null;
       } catch (checkError) {
         // checkQueue 可能抛出错误（例如连接已关闭、队列不存在等）
-        const errorMessage = checkError instanceof Error ? checkError.message : String(checkError);
-        if (
-          errorMessage.includes("Connection closing") ||
-          errorMessage.includes("IllegalOperationError") ||
-          errorMessage.includes("Channel closed") ||
-          errorMessage.includes("NOT_FOUND") ||
-          errorMessage.includes("NOT-FOUND")
-        ) {
-          return null;
-        }
-        // 其他错误也返回 null，避免中断处理循环
+        // 所有错误都返回 null，避免中断处理循环和未捕获的异常
         return null;
       }
     } catch (error) {
       // 如果连接已关闭或出错，返回 null（避免未捕获的错误）
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (
-        errorMessage.includes("Connection closing") ||
-        errorMessage.includes("IllegalOperationError") ||
-        errorMessage.includes("Channel closed") ||
-        errorMessage.includes("NOT_FOUND") ||
-        errorMessage.includes("NOT-FOUND")
-      ) {
-        return null;
-      }
-      // 其他错误也返回 null，避免中断处理循环
+      // 所有错误都返回 null，避免中断处理循环和未捕获的异常
       return null;
     }
   }
