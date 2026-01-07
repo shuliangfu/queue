@@ -41,6 +41,15 @@ export interface RabbitMQAdapterOptions {
       deleteQueue(queue: string): Promise<void>;
       /** 获取队列消息数量 */
       checkQueue(queue: string): Promise<{ messageCount: number }>;
+      /** 从队列中获取一条消息（非阻塞） */
+      get(
+        queue: string,
+        options?: { noAck?: boolean },
+      ): Promise<{
+        content: Uint8Array;
+        ack(): void;
+        nack(requeue?: boolean): void;
+      } | null>;
     }>;
     /** 关闭连接 */
     close(): Promise<void>;
@@ -85,7 +94,9 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
     // 异步初始化，捕获错误避免未捕获的 promise rejection
     this.init().catch((error) => {
       // 静默处理初始化错误（连接可能在测试中被关闭）
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
       if (
         !errorMessage.includes("Connection closing") &&
         !errorMessage.includes("IllegalOperationError") &&
@@ -119,7 +130,9 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         await this.init();
       } catch (error) {
         // 如果初始化失败（例如连接已关闭），返回 undefined
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
         if (
           errorMessage.includes("Connection closing") ||
           errorMessage.includes("IllegalOperationError") ||
@@ -161,7 +174,9 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
       this.jobCache.set(job.id, job);
 
       // 发送消息到队列
-      const message = new TextEncoder().encode(JSON.stringify({ jobId: job.id }));
+      const message = new TextEncoder().encode(
+        JSON.stringify({ jobId: job.id }),
+      );
       channel.sendToQueue(
         queueName,
         message,
@@ -169,7 +184,9 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
       );
     } catch (error) {
       // 如果连接已关闭，只存储到缓存
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
       if (
         errorMessage.includes("Connection closing") ||
         errorMessage.includes("IllegalOperationError") ||
@@ -197,7 +214,7 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
           await channel.assertQueue(queueName, {
             durable: this.queueOptions.durable,
           });
-        } catch (assertError) {
+        } catch (_assertError) {
           // 如果声明队列失败，返回 null
           return null;
         }
@@ -209,15 +226,46 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
           return null;
         }
 
-        // 注意：RabbitMQ 的 getNext 实现较复杂，需要使用 consume 模式
-        // 这里返回 null，实际应该通过 consume 回调处理
-        return null;
-      } catch (checkError) {
+        // 使用 get 方法从队列中获取一条消息（非阻塞）
+        // 注意：get 方法会消费消息，所以我们需要手动确认
+        try {
+          const msg = await channel.get(queueName, { noAck: false });
+          if (!msg) {
+            return null;
+          }
+
+          // 解析消息内容（应该包含 jobId）
+          // msg.content 是 Uint8Array，需要转换为字符串
+          const contentStr = new TextDecoder().decode(msg.content);
+          const { jobId } = JSON.parse(contentStr);
+
+          // 从缓存中获取任务数据
+          const job = this.jobCache.get(jobId);
+          if (!job) {
+            // 如果缓存中没有任务，拒绝消息
+            msg.nack(true); // 重新入队
+            return null;
+          }
+
+          // 确认消息已接收
+          msg.ack();
+
+          // 更新任务状态
+          job.status = "processing";
+          job.startedAt = Date.now();
+          this.jobCache.set(jobId, job);
+
+          return job;
+        } catch (_getError) {
+          // 如果 get 失败，返回 null
+          return null;
+        }
+      } catch (_checkError) {
         // checkQueue 可能抛出错误（例如连接已关闭、队列不存在等）
         // 所有错误都返回 null，避免中断处理循环和未捕获的异常
         return null;
       }
-    } catch (error) {
+    } catch (_error) {
       // 如果连接已关闭或出错，返回 null（避免未捕获的错误）
       // 所有错误都返回 null，避免中断处理循环和未捕获的异常
       return null;

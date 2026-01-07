@@ -98,7 +98,22 @@ async function createRabbitMQConnection() {
               content: Uint8Array,
               options?: { persistent?: boolean },
             ) => {
-              return channel.sendToQueue(queue, content, options);
+              // 将 Uint8Array 转换为 Buffer（amqplib 要求 Buffer 类型）
+              // 在 Deno 中，可以使用 Buffer.from() 或直接传递 Uint8Array
+              // 但 amqplib 可能期望 Buffer，所以我们需要转换
+              try {
+                // 尝试使用 Node.js 的 Buffer（如果可用）
+                const Buffer = (globalThis as any).Buffer;
+                if (Buffer) {
+                  return channel.sendToQueue(queue, Buffer.from(content), options);
+                }
+                // 如果 Buffer 不可用，尝试直接传递（某些版本可能接受 Uint8Array）
+                return channel.sendToQueue(queue, content as any, options);
+              } catch (error) {
+                // 如果转换失败，尝试使用 Buffer polyfill
+                const buffer = new Uint8Array(content);
+                return channel.sendToQueue(queue, buffer as any, options);
+              }
             },
             consume: async (
               queue: string,
@@ -127,6 +142,17 @@ async function createRabbitMQConnection() {
             checkQueue: async (queue: string) => {
               const result = await channel.checkQueue(queue);
               return { messageCount: result.messageCount };
+            },
+            get: async (queue: string, options?: { noAck?: boolean }) => {
+              const msg = await channel.get(queue, options);
+              if (!msg) {
+                return null;
+              }
+              return {
+                content: msg.content,
+                ack: () => channel.ack(msg),
+                nack: (requeue?: boolean) => channel.nack(msg, false, requeue ?? false),
+              };
             },
           };
         },

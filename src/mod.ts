@@ -214,7 +214,9 @@ export class Queue {
             break;
           }
           // 检查是否是连接关闭错误，如果是则静默处理（不输出错误日志）
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = error instanceof Error
+            ? error.message
+            : String(error);
           if (
             !errorMessage.includes("The client is closed") &&
             !errorMessage.includes("Connection closing") &&
