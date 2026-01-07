@@ -82,7 +82,19 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
     this.queueOptions = {
       durable: options.queueOptions?.durable ?? true,
     };
-    this.init();
+    // 异步初始化，捕获错误避免未捕获的 promise rejection
+    this.init().catch((error) => {
+      // 静默处理初始化错误（连接可能在测试中被关闭）
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (
+        !errorMessage.includes("Connection closing") &&
+        !errorMessage.includes("IllegalOperationError") &&
+        !errorMessage.includes("Channel closed")
+      ) {
+        // 只有非连接关闭错误才记录
+        console.error(`RabbitMQ 适配器初始化失败: ${errorMessage}`);
+      }
+    });
   }
 
   /**
@@ -187,16 +199,18 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         // 这里返回 null，实际应该通过 consume 回调处理
         return null;
       } catch (checkError) {
-        // checkQueue 可能抛出错误（例如连接已关闭）
+        // checkQueue 可能抛出错误（例如连接已关闭、队列不存在等）
         const errorMessage = checkError instanceof Error ? checkError.message : String(checkError);
         if (
           errorMessage.includes("Connection closing") ||
           errorMessage.includes("IllegalOperationError") ||
-          errorMessage.includes("Channel closed")
+          errorMessage.includes("Channel closed") ||
+          errorMessage.includes("NOT_FOUND") ||
+          errorMessage.includes("NOT-FOUND")
         ) {
           return null;
         }
-        // 其他错误也返回 null
+        // 其他错误也返回 null，避免中断处理循环
         return null;
       }
     } catch (error) {
@@ -205,7 +219,9 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
       if (
         errorMessage.includes("Connection closing") ||
         errorMessage.includes("IllegalOperationError") ||
-        errorMessage.includes("Channel closed")
+        errorMessage.includes("Channel closed") ||
+        errorMessage.includes("NOT_FOUND") ||
+        errorMessage.includes("NOT-FOUND")
       ) {
         return null;
       }

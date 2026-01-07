@@ -71,7 +71,9 @@ async function createRabbitMQConnection() {
     // 尝试使用 npm:amqplib
     const amqp = await import("npm:amqplib@^0.10.0");
     // RabbitMQ 默认用户名和密码是 guest/guest
-    const connection = await amqp.default.connect("amqp://guest:guest@localhost");
+    const connection = await amqp.default.connect(
+      "amqp://guest:guest@localhost",
+    );
 
     return {
       connection: {
@@ -349,8 +351,15 @@ describe("Queue", () => {
         });
         expect(adapter).toBeTruthy();
 
+        // 等待适配器初始化完成
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
         // 清理
-        await connection.connection.close();
+        try {
+          await connection.connection.close();
+        } catch (error) {
+          // 忽略关闭时的错误
+        }
       } catch (error) {
         console.log(
           `⚠️  跳过：无法创建 RabbitMQ 连接 - ${
