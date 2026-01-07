@@ -187,23 +187,45 @@ export class Queue {
    */
   private async processLoop(): Promise<void> {
     while (this.running) {
-      // 检查并发限制
-      if (this.processing.size >= this.concurrency) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        continue;
-      }
+      try {
+        // 检查并发限制
+        if (this.processing.size >= this.concurrency) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          continue;
+        }
 
-      // 获取下一个任务
-      const job = await this.adapter.getNext(this.name);
-      if (!job) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        continue;
-      }
+        // 获取下一个任务（可能因为适配器关闭而失败）
+        let job: Job | null = null;
+        try {
+          job = await this.adapter.getNext(this.name);
+        } catch (error) {
+          // 如果适配器已关闭或出错，停止处理循环
+          if (!this.running) {
+            break;
+          }
+          // 否则记录错误并继续
+          console.error(`获取任务失败: ${error instanceof Error ? error.message : String(error)}`);
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          continue;
+        }
 
-      // 处理任务
-      this.processJob(job).catch((error) => {
-        console.error(`处理任务失败: ${job.id}`, error);
-      });
+        if (!job) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          continue;
+        }
+
+        // 处理任务
+        this.processJob(job).catch((error) => {
+          console.error(`处理任务失败: ${job.id}`, error);
+        });
+      } catch (error) {
+        // 捕获其他意外错误，避免未捕获的 promise rejection
+        if (!this.running) {
+          break;
+        }
+        console.error(`处理循环错误: ${error instanceof Error ? error.message : String(error)}`);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
     }
   }
 
@@ -336,9 +358,10 @@ export class QueueManager {
   private queues: Map<string, Queue> = new Map();
   private autoRecover: boolean;
   private recoverTimeout: number;
+  private recoveryIntervalId?: number;
   private scheduledTasks: Map<string, ScheduleOptions> = new Map();
   private scheduledHandlers: Map<string, ScheduledTaskHandler> = new Map();
-  private cronTasks: Map<string, { signal: AbortController }> = new Map();
+  private cronTasks: Map<string, { signal: AbortController; intervalId?: number }> = new Map();
 
   constructor(options: QueueManagerOptions) {
     if (!options.adapter) {
@@ -393,9 +416,9 @@ export class QueueManager {
    * 启动自动恢复
    */
   private startRecovery(): void {
-    setInterval(async () => {
+    this.recoveryIntervalId = setInterval(async () => {
       await this.recoverJobs();
-    }, this.recoverTimeout);
+    }, this.recoverTimeout) as unknown as number;
   }
 
   /**
@@ -514,6 +537,7 @@ export class QueueManager {
     // 存储 interval ID 以便后续清理
     this.cronTasks.set(name, {
       signal: new AbortController(), // 用于兼容性
+      intervalId, // 保存 interval ID 以便清理
     });
   }
 
@@ -555,6 +579,10 @@ export class QueueManager {
     const task = this.cronTasks.get(name);
     if (task) {
       task.signal.abort();
+      // 清理 setInterval（如果存在）
+      if (task.intervalId !== undefined) {
+        clearInterval(task.intervalId);
+      }
       this.cronTasks.delete(name);
     }
   }
@@ -644,6 +672,12 @@ export class QueueManager {
    */
   async close(): Promise<void> {
     await Promise.resolve();
+    // 停止自动恢复
+    if (this.recoveryIntervalId !== undefined) {
+      clearInterval(this.recoveryIntervalId);
+      this.recoveryIntervalId = undefined;
+    }
+
     // 停止所有队列
     for (const queue of this.queues.values()) {
       queue.stop();

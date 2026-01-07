@@ -142,7 +142,7 @@ describe("Queue", () => {
 
     it("应该添加和获取任务", async () => {
       const adapter = new MemoryQueueAdapter();
-      const queueManager = new QueueManager({ adapter });
+      const queueManager = new QueueManager({ adapter, autoRecover: false });
       const queue = queueManager.createQueue("test", { concurrency: 1 });
 
       await queue.add("test-job", { data: "test" });
@@ -154,7 +154,7 @@ describe("Queue", () => {
 
     it("应该处理任务", async () => {
       const adapter = new MemoryQueueAdapter();
-      const queueManager = new QueueManager({ adapter });
+      const queueManager = new QueueManager({ adapter, autoRecover: false });
       const queue = queueManager.createQueue("test", { concurrency: 1 });
 
       let processed = false;
@@ -197,7 +197,7 @@ describe("Queue", () => {
         const { RedisQueueAdapter } = await import("../src/adapters/redis.ts");
         const adapter = new RedisQueueAdapter({ client: redisClient });
         expect(adapter).toBeTruthy();
-        
+
         // 清理
         await redisClient.disconnect();
       } catch (error) {
@@ -222,17 +222,17 @@ describe("Queue", () => {
         const { RedisQueueAdapter } = await import("../src/adapters/redis.ts");
         const adapter = new RedisQueueAdapter({ client: redisClient });
 
-        const queueManager = new QueueManager({ adapter });
+        const queueManager = new QueueManager({ adapter, autoRecover: false });
         const queue = queueManager.createQueue("test-redis-stats", {
           concurrency: 1,
         });
 
         // 不设置处理器，确保任务保持 pending 状态
         const job = await queue.add("test-job", { data: "test" });
-        
+
         // 等待一小段时间确保任务已添加到 Redis
         await new Promise((resolve) => setTimeout(resolve, 200));
-        
+
         // 直接通过适配器获取任务，验证任务是否被正确添加
         const retrievedJob = await adapter.get(job.id);
         expect(retrievedJob).toBeTruthy();
@@ -272,7 +272,7 @@ describe("Queue", () => {
         const { RedisQueueAdapter } = await import("../src/adapters/redis.ts");
         const redisAdapter = new RedisQueueAdapter({ client });
 
-        const queueManager = new QueueManager({ adapter: redisAdapter });
+        const queueManager = new QueueManager({ adapter: redisAdapter, autoRecover: false });
         const queue = queueManager.createQueue("test-redis-process", {
           concurrency: 1,
         });
@@ -342,7 +342,7 @@ describe("Queue", () => {
           queueOptions: { durable: true },
         });
         expect(adapter).toBeTruthy();
-        
+
         // 清理
         await connection.connection.close();
       } catch (error) {
@@ -375,16 +375,16 @@ describe("Queue", () => {
           queueOptions: { durable: true },
         });
 
-        const queueManager = new QueueManager({ adapter });
+        const queueManager = new QueueManager({ adapter, autoRecover: false });
         const queue = queueManager.createQueue("test-rabbitmq", {
           concurrency: 1,
         });
 
         const job = await queue.add("test-job", { data: "test" });
-        
+
         // 等待任务添加
         await new Promise((resolve) => setTimeout(resolve, 200));
-        
+
         // 直接通过适配器获取任务
         const retrievedJob = await adapter.get(job.id);
         expect(retrievedJob).toBeTruthy();
@@ -426,7 +426,7 @@ describe("Queue", () => {
           queueOptions: { durable: true },
         });
 
-        const queueManager = new QueueManager({ adapter: rabbitMQAdapter });
+        const queueManager = new QueueManager({ adapter: rabbitMQAdapter, autoRecover: false });
         const queue = queueManager.createQueue("test-rabbitmq-process", {
           concurrency: 1,
         });
