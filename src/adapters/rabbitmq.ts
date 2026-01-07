@@ -130,6 +130,9 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
 
   async add(job: Job): Promise<void> {
     const channel = await this.ensureChannel();
+    if (!channel) {
+      throw new Error("无法创建 RabbitMQ 通道：连接已关闭");
+    }
     const queueName = this.getQueueName(job.id);
 
     // 声明队列
@@ -216,6 +219,9 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
 
   async clear(queueName: string): Promise<void> {
     const channel = await this.ensureChannel();
+    if (!channel) {
+      return; // 连接已关闭，无法清理
+    }
     await channel.deleteQueue(queueName);
 
     // 清除缓存中该队列的任务
