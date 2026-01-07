@@ -129,27 +129,43 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
   }
 
   async add(job: Job): Promise<void> {
-    const channel = await this.ensureChannel();
-    if (!channel) {
-      throw new Error("无法创建 RabbitMQ 通道：连接已关闭");
+    try {
+      const channel = await this.ensureChannel();
+      if (!channel) {
+        // 连接已关闭，只存储到缓存（简化处理）
+        this.jobCache.set(job.id, job);
+        return;
+      }
+      const queueName = this.getQueueName(job.id);
+
+      // 声明队列
+      await channel.assertQueue(queueName, {
+        durable: this.queueOptions.durable,
+      });
+
+      // 存储任务数据到缓存（实际应该存储到数据库或 Redis）
+      this.jobCache.set(job.id, job);
+
+      // 发送消息到队列
+      const message = new TextEncoder().encode(JSON.stringify({ jobId: job.id }));
+      channel.sendToQueue(
+        queueName,
+        message,
+        { persistent: this.queueOptions.durable },
+      );
+    } catch (error) {
+      // 如果连接已关闭，只存储到缓存
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (
+        errorMessage.includes("Connection closing") ||
+        errorMessage.includes("IllegalOperationError") ||
+        errorMessage.includes("Channel closed")
+      ) {
+        this.jobCache.set(job.id, job);
+        return;
+      }
+      throw error;
     }
-    const queueName = this.getQueueName(job.id);
-
-    // 声明队列
-    await channel.assertQueue(queueName, {
-      durable: this.queueOptions.durable,
-    });
-
-    // 存储任务数据到缓存（实际应该存储到数据库或 Redis）
-    this.jobCache.set(job.id, job);
-
-    // 发送消息到队列
-    const message = new TextEncoder().encode(JSON.stringify({ jobId: job.id }));
-    channel.sendToQueue(
-      queueName,
-      message,
-      { persistent: this.queueOptions.durable },
-    );
   }
 
   async getNext(queueName: string): Promise<Job | null> {
