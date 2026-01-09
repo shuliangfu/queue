@@ -1,8 +1,13 @@
 # @dreamer/queue
 
-一个用于 Deno 的队列和任务调度库，提供任务队列、任务调度、并发控制等功能。
+> 一个兼容 Deno 和 Bun 的队列和任务调度库，提供任务队列、任务调度、并发控制等功能
 
-## 功能
+[![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 🎯 功能
 
 队列和任务调度库，用于异步任务处理、定时任务、批量处理等。
 
@@ -58,8 +63,8 @@ deno add jsr:@dreamer/queue
 
 ## 环境兼容性
 
-- **Deno 版本**：要求 Deno 2.5 或更高版本
-- **服务端**：✅ 支持（Deno 运行时）
+- **运行时要求**：Deno 2.5+ 或 Bun 1.0+
+- **服务端**：✅ 支持（兼容 Deno 和 Bun 运行时）
 - **客户端**：❌ 不支持（浏览器环境无法运行任务队列）
 - **依赖**：根据使用的适配器需要相应的客户端库
   - **Redis 适配器**：需要 Redis 客户端库（如 `npm:redis` 或 `npm:ioredis`）
@@ -698,7 +703,9 @@ interface QueueAdapter {
 }
 ```
 
-## 完整示例
+---
+
+## 📚 API 文档
 
 ```typescript
 import { QueueManager, RedisQueueAdapter } from "jsr:@dreamer/queue";
@@ -841,3 +848,33 @@ await queueManager.close();
 - 适配器接口：实现 `QueueAdapter` 接口以支持自定义持久化
 - 任务状态：任务状态会自动更新，可通过 `getJob` 查询
 - 故障恢复：自动恢复超时的处理中任务，防止任务丢失
+
+---
+
+## 📝 备注
+
+- **服务端专用**：队列系统是服务端架构模式，客户端不需要
+- **统一接口**：提供统一的队列管理 API 接口，降低学习成本
+- **适配器模式**：支持多种持久化后端（Redis、RabbitMQ、MongoDB），易于扩展
+- **类型安全**：完整的 TypeScript 类型支持
+- **依赖**：需要相应的队列适配器（Redis、RabbitMQ、MongoDB）
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 📄 许可证
+
+MIT License - 详见 [LICENSE.md](./LICENSE.md)
+
+---
+
+<div align="center">
+
+**Made with ❤️ by Dreamer Team**
+
+</div>
