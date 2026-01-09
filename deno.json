@@ -1,12 +1,15 @@
 {
   "name": "@dreamer/queue",
-  "version": "1.0.0-alpha.1",
+  "version": "1.0.0-beta.1",
   "license": "MIT",
   "exports": {
     ".": "./src/mod.ts"
   },
+  "nodeModulesDir": "auto",
   "imports": {
-    "@dreamer/test": "jsr:@dreamer/test@^1.0.0-alpha.1"
+    "@dreamer/test": "jsr:@dreamer/test@1.0.0-beta.6",
+    "@dreamer/runtime-adapter": "jsr:@dreamer/runtime-adapter@^1.0.0-beta.2",
+    "mongodb": "npm:mongodb@^6.0.0"
   },
   "unstable": [
     "cron"

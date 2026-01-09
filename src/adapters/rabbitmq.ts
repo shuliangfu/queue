@@ -9,11 +9,31 @@
 import type { Job, QueueAdapter } from "./base.ts";
 
 /**
+ * RabbitMQ 连接配置
+ */
+export interface RabbitMQConnectionConfig {
+  /** RabbitMQ 连接 URL（例如：amqp://guest:guest@127.0.0.1:5672） */
+  url?: string;
+  /** RabbitMQ 主机地址（默认：127.0.0.1） */
+  hostname?: string;
+  /** RabbitMQ 端口（默认：5672） */
+  port?: number;
+  /** RabbitMQ 用户名（默认：guest） */
+  username?: string;
+  /** RabbitMQ 密码（默认：guest） */
+  password?: string;
+  /** 虚拟主机（默认：/） */
+  vhost?: string;
+}
+
+/**
  * RabbitMQ 队列适配器配置
  */
 export interface RabbitMQAdapterOptions {
-  /** RabbitMQ 连接（需要用户自行安装和创建） */
-  connection: {
+  /** RabbitMQ 连接配置（如果提供，适配器会内部创建连接） */
+  connection?: RabbitMQConnectionConfig;
+  /** RabbitMQ 连接对象（如果提供 connection，则不需要提供此参数） */
+  connectionObject?: {
     /** 创建通道 */
     createChannel(): Promise<{
       /** 声明队列 */
@@ -45,11 +65,13 @@ export interface RabbitMQAdapterOptions {
       get(
         queue: string,
         options?: { noAck?: boolean },
-      ): Promise<{
-        content: Uint8Array;
-        ack(): void;
-        nack(requeue?: boolean): void;
-      } | null>;
+      ): Promise<
+        {
+          content: Uint8Array;
+          ack(): void;
+          nack(requeue?: boolean): void;
+        } | null
+      >;
     }>;
     /** 关闭连接 */
     close(): Promise<void>;
@@ -66,52 +88,249 @@ export interface RabbitMQAdapterOptions {
  *
  * 使用 RabbitMQ 作为任务存储后端，支持任务持久化和故障恢复。
  *
- * 需要用户自行安装 RabbitMQ 客户端库，例如：
- * - npm:amqplib
+ * 适配器会自动创建和管理 RabbitMQ 连接，用户只需提供连接参数。
  *
  * @example
  * ```typescript
  * import { RabbitMQQueueAdapter } from "jsr:@dreamer/queue/adapters";
- * import amqp from "npm:amqplib";
  *
- * const connection = await amqp.connect("amqp://localhost");
- * const adapter = new RabbitMQQueueAdapter({ connection });
+ * // 方式1：使用连接配置（推荐）
+ * const adapter = new RabbitMQQueueAdapter({
+ *   connection: { url: "amqp://guest:guest@localhost:5672" }
+ * });
+ * await adapter.connect();
+ *
+ * // 方式2：使用已创建的连接对象（兼容旧代码）
+ * const adapter = new RabbitMQQueueAdapter({ connectionObject: connection });
  * ```
  */
 export class RabbitMQQueueAdapter implements QueueAdapter {
-  private connection: RabbitMQAdapterOptions["connection"];
+  private connection: RabbitMQAdapterOptions["connectionObject"];
+  private connectionConfig?: RabbitMQConnectionConfig;
+  private internalConnection: any = null; // 内部创建的连接
   private channel?: Awaited<
-    ReturnType<RabbitMQAdapterOptions["connection"]["createChannel"]>
+    ReturnType<
+      NonNullable<RabbitMQAdapterOptions["connectionObject"]>["createChannel"]
+    >
   >;
   private queueOptions: { durable: boolean };
   private jobCache: Map<string, Job> = new Map(); // 临时缓存，用于存储任务数据
 
   constructor(options: RabbitMQAdapterOptions) {
-    this.connection = options.connection;
-    this.queueOptions = {
-      durable: options.queueOptions?.durable ?? true,
-    };
-    // 异步初始化，捕获错误避免未捕获的 promise rejection
-    this.init().catch((error) => {
-      // 静默处理初始化错误（连接可能在测试中被关闭）
-      const errorMessage = error instanceof Error
-        ? error.message
-        : String(error);
-      if (
-        !errorMessage.includes("Connection closing") &&
-        !errorMessage.includes("IllegalOperationError") &&
-        !errorMessage.includes("Channel closed")
-      ) {
-        // 只有非连接关闭错误才记录
-        console.error(`RabbitMQ 适配器初始化失败: ${errorMessage}`);
+    if (options.connection) {
+      // 如果提供了连接配置，保存配置，稍后创建连接
+      this.connectionConfig = options.connection;
+      this.queueOptions = {
+        durable: options.queueOptions?.durable ?? true,
+      };
+    } else if (options.connectionObject) {
+      // 如果提供了连接对象，直接使用
+      this.connection = options.connectionObject;
+      this.queueOptions = {
+        durable: options.queueOptions?.durable ?? true,
+      };
+      // 异步初始化，捕获错误避免未捕获的 promise rejection
+      this.init().catch((error) => {
+        // 静默处理初始化错误（连接可能在测试中被关闭）
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        if (
+          !errorMessage.includes("Connection closing") &&
+          !errorMessage.includes("IllegalOperationError") &&
+          !errorMessage.includes("Channel closed")
+        ) {
+          // 只有非连接关闭错误才记录
+          console.error(`RabbitMQ 适配器初始化失败: ${errorMessage}`);
+        }
+      });
+    } else {
+      throw new Error(
+        "RabbitMQQueueAdapter 需要提供 connection 配置或 connectionObject 实例",
+      );
+    }
+  }
+
+  /**
+   * 连接到 RabbitMQ（如果使用 connection 配置）
+   */
+  async connect(): Promise<void> {
+    if (this.connectionConfig && !this.internalConnection) {
+      try {
+        // 动态导入 RabbitMQ 客户端库
+        // 在 Bun 中，直接使用包名；在 Deno 中，使用 npm: 前缀
+        const isBun = typeof (globalThis as any).Bun !== "undefined";
+        const amqpModule = isBun
+          ? await import("amqplib")
+          : await import("npm:amqplib@^0.10.0");
+        // amqplib 的导入方式：在 Deno 中是 default，在 Bun 中可能是 default 或命名导出
+        const amqp = (amqpModule as any).default || amqpModule;
+
+        // 构建连接 URL
+        let connectionUrl: string;
+        if (this.connectionConfig.url) {
+          connectionUrl = this.connectionConfig.url;
+        } else {
+          const hostname = this.connectionConfig.hostname || "127.0.0.1";
+          const port = this.connectionConfig.port || 5672;
+          const username = this.connectionConfig.username || "guest";
+          const password = this.connectionConfig.password || "guest";
+          const vhost = this.connectionConfig.vhost || "/";
+          connectionUrl =
+            `amqp://${username}:${password}@${hostname}:${port}${vhost}`;
+        }
+
+        // 尝试连接（先试 127.0.0.1，失败后试 localhost）
+        let connection;
+        try {
+          // amqplib 的 connect 方法可能在 default 或直接导出
+          const connect = amqp.connect || (amqp as any).default?.connect ||
+            (amqp as any).default;
+          connection = await connect(connectionUrl);
+        } catch (error) {
+          // 如果 127.0.0.1 失败，尝试 localhost
+          if (connectionUrl.includes("127.0.0.1")) {
+            try {
+              connectionUrl = connectionUrl.replace("127.0.0.1", "localhost");
+              const connect = amqp.connect || (amqp as any).default?.connect ||
+                (amqp as any).default;
+              connection = await connect(connectionUrl);
+            } catch (_e) {
+              // 如果都失败，抛出原始错误
+              throw error;
+            }
+          } else {
+            throw error;
+          }
+        }
+
+        this.internalConnection = connection;
+
+        // 添加错误处理器
+        connection.on("error", (_error: any) => {
+          // 静默处理连接错误（在测试清理时是正常的）
+        });
+
+        // 包装为适配器需要的接口
+        this.connection = {
+          createChannel: async () => {
+            const channel = await connection.createChannel();
+            return {
+              assertQueue: async (
+                queue: string,
+                options?: { durable?: boolean },
+              ) => {
+                await channel.assertQueue(queue, options);
+                return { queue };
+              },
+              sendToQueue: (
+                queue: string,
+                content: Uint8Array,
+                options?: { persistent?: boolean },
+              ) => {
+                // 将 Uint8Array 转换为 Buffer（amqplib 要求 Buffer 类型）
+                try {
+                  const Buffer = (globalThis as any).Buffer;
+                  if (Buffer) {
+                    return channel.sendToQueue(
+                      queue,
+                      Buffer.from(content),
+                      options,
+                    );
+                  }
+                  return channel.sendToQueue(queue, content as any, options);
+                } catch (_error) {
+                  const buffer = new Uint8Array(content);
+                  return channel.sendToQueue(queue, buffer as any, options);
+                }
+              },
+              consume: async (
+                queue: string,
+                onMessage: (
+                  msg: { content: Uint8Array; ack(): void; nack(): void },
+                ) => void,
+                options?: { noAck?: boolean },
+              ) => {
+                const result = await channel.consume(
+                  queue,
+                  (msg: any) => {
+                    if (msg) {
+                      onMessage({
+                        content: msg.content,
+                        ack: () => channel.ack(msg),
+                        nack: () => channel.nack(msg),
+                      });
+                    }
+                  },
+                  options,
+                );
+                return result.consumerTag;
+              },
+              cancel: (consumerTag: string) => channel.cancel(consumerTag),
+              deleteQueue: (queue: string) => channel.deleteQueue(queue),
+              checkQueue: async (queue: string) => {
+                const result = await channel.checkQueue(queue);
+                return { messageCount: result.messageCount };
+              },
+              get: async (queue: string, options?: { noAck?: boolean }) => {
+                const msg = await channel.get(queue, options);
+                if (!msg) {
+                  return null;
+                }
+                return {
+                  content: msg.content,
+                  ack: () => channel.ack(msg),
+                  nack: (requeue?: boolean) =>
+                    channel.nack(msg, false, requeue ?? false),
+                };
+              },
+            };
+          },
+          close: () => connection.close(),
+        };
+
+        // 初始化通道
+        await this.init();
+      } catch (error) {
+        throw new Error(
+          `无法创建 RabbitMQ 连接: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
       }
-    });
+    }
+  }
+
+  /**
+   * 断开 RabbitMQ 连接
+   */
+  async disconnect(): Promise<void> {
+    if (this.internalConnection) {
+      try {
+        await this.internalConnection.close();
+      } catch {
+        // 忽略关闭错误
+      }
+      this.internalConnection = null;
+      this.connection = undefined;
+      this.channel = undefined;
+    } else if (this.connection?.close) {
+      // 如果使用的是外部连接，调用其 close 方法
+      try {
+        await this.connection.close();
+      } catch {
+        // 忽略关闭错误
+      }
+    }
   }
 
   /**
    * 初始化通道
    */
   private async init(): Promise<void> {
+    if (!this.connection) {
+      throw new Error("RabbitMQ 连接未建立，请先调用 connect()");
+    }
     try {
       this.channel = await this.connection.createChannel();
     } catch (error) {
@@ -151,8 +370,23 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
   /**
    * 获取队列名称
    */
+  /**
+   * 从任务 ID 提取队列名称
+   * 任务 ID 格式：${queueName}-${timestamp}-${random}
+   * 例如：test-rabbitmq-process-1234567890-abc123
+   */
   private getQueueName(jobId: string): string {
-    return jobId.split("-")[0];
+    // 任务 ID 格式：queueName-timestamp-random
+    // 需要提取第一个部分（队列名称可能包含连字符）
+    // 实际上，任务 ID 的格式是：${this.name}-${Date.now()}-${random}
+    // 所以队列名称是除了最后两个部分（timestamp 和 random）之外的所有部分
+    const parts = jobId.split("-");
+    if (parts.length >= 3) {
+      // 队列名称是除了最后两个部分之外的所有部分
+      return parts.slice(0, -2).join("-");
+    }
+    // 如果格式不符合预期，返回第一个部分作为后备
+    return parts[0] || "default";
   }
 
   async add(job: Job): Promise<void> {

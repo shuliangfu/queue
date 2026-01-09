@@ -6,8 +6,7 @@
  * 提供任务队列、任务调度、并发控制等功能。
  * 支持内存队列和持久化队列（通过适配器支持 Redis、RabbitMQ）。
  *
- * @requires --unstable-cron 定时任务功能使用 Deno.cron API，需要启用 unstable cron 权限。
- * 在 deno.json 中配置：`"unstable": ["cron"]` 或在运行时使用：`deno run --unstable-cron`
+ * 定时任务功能使用 @dreamer/runtime-adapter 的 cron API，兼容 Deno 和 Bun 环境。
  */
 
 // 从适配器模块导入类型和接口
@@ -17,6 +16,9 @@ import type {
   JobPriority,
   QueueAdapter,
 } from "./adapters/mod.ts";
+
+// 导入 runtime-adapter 的 cron API
+import { cron, type CronHandle, IS_DENO } from "@dreamer/runtime-adapter";
 
 // 重新导出类型（供外部使用）
 export type {
@@ -30,10 +32,13 @@ export type {
 // 导出适配器（方便使用）
 export {
   MemoryQueueAdapter,
+  MongoDBQueueAdapter,
   RabbitMQQueueAdapter,
   RedisQueueAdapter,
 } from "./adapters/mod.ts";
 export type {
+  MongoDBAdapterOptions,
+  MongoDBConnectionConfig,
   RabbitMQAdapterOptions,
   RedisAdapterOptions,
 } from "./adapters/mod.ts";
@@ -221,9 +226,11 @@ export class Queue {
             !errorMessage.includes("The client is closed") &&
             !errorMessage.includes("Connection closing") &&
             !errorMessage.includes("IllegalOperationError") &&
-            !errorMessage.includes("Channel closed")
+            !errorMessage.includes("Channel closed") &&
+            !errorMessage.includes("未连接") &&
+            !errorMessage.includes("未建立")
           ) {
-            // 只有非连接关闭错误才记录
+            // 只有非连接关闭错误才记录（包括未连接错误）
             console.error(
               `获取任务失败: ${errorMessage}`,
             );
@@ -375,11 +382,27 @@ export class Queue {
       this.intervalId = undefined;
     }
     // 清理所有待处理的定时器
+    // 在 Deno 环境下，需要确保所有定时器都被清理
     for (const timeoutId of this.pendingTimeouts) {
-      console.log("清理待处理的定时器.......................", timeoutId);
-      clearTimeout(timeoutId);
+      try {
+        clearTimeout(timeoutId);
+      } catch {
+        // 忽略清理错误（定时器可能已经完成）
+      }
     }
     this.pendingTimeouts.clear();
+  }
+
+  /**
+   * 等待所有定时器完成（用于 Deno 环境下的资源清理）
+   * 这是一个辅助方法，主要用于测试环境
+   */
+  async waitForTimers(): Promise<void> {
+    if (IS_DENO && this.pendingTimeouts.size > 0) {
+      // 在 Deno 环境下，等待所有定时器完成
+      // 最大等待时间 200ms（定时器间隔是 100ms）
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
   }
 
   /**
@@ -429,7 +452,7 @@ export class QueueManager {
   private scheduledHandlers: Map<string, ScheduledTaskHandler> = new Map();
   private cronTasks: Map<
     string,
-    { signal: AbortController; intervalId?: number }
+    { handle: CronHandle; signal: AbortController }
   > = new Map();
 
   constructor(options: QueueManagerOptions) {
@@ -516,102 +539,61 @@ export class QueueManager {
   }
 
   /**
-   * 创建 Deno.cron 任务
+   * 创建定时任务
    *
-   * 使用 Deno 内置的 cron 服务来调度任务。
-   * 注意：Deno.cron 使用 UTC 时区。
+   * 使用 @dreamer/runtime-adapter 的 cron API，兼容 Deno 和 Bun 环境。
+   * 注意：使用 UTC 时区。
    */
-  private createCronTask(name: string, schedule: ScheduleOptions): void {
+  private async createCronTask(
+    name: string,
+    schedule: ScheduleOptions,
+  ): Promise<void> {
     // 如果任务已存在，先移除
     this.removeCronTask(name);
 
-    // 创建 AbortController 用于标记任务（虽然 Deno.cron 可能不支持 signal，但用于内部标记）
+    // 创建 AbortController 用于取消任务
     const signal = new AbortController();
-    this.cronTasks.set(name, { signal });
 
-    // 使用 Deno.cron 创建定时任务
-    // 注意：Deno.cron 在运行时动态创建，虽然文档建议在顶层定义，
-    // 但实际测试中可以在运行时创建
+    // 使用 runtime-adapter 的 cron API 创建定时任务
+    // runtime-adapter 使用 node-cron，支持 5 字段和 6 字段格式
     try {
-      // Deno.cron 的签名：Deno.cron(name, cron, handler) 或 Deno.cron(name, cron, options, handler)
-      // 检查是否支持 options 参数（backoffSchedule 等）
-      if (typeof (Deno as any).cron === "function") {
-        // 尝试使用 Deno.cron（可能支持 options 参数）
-        try {
-          (Deno as any).cron(
-            `queue-${name}`,
-            schedule.cron,
-            async () => {
-              // 检查任务是否仍然启用
-              const currentSchedule = this.scheduledTasks.get(name);
-              if (!currentSchedule || !currentSchedule.enabled) {
-                return;
-              }
+      const handle = await cron(
+        schedule.cron,
+        async () => {
+          // 检查任务是否仍然启用
+          const currentSchedule = this.scheduledTasks.get(name);
+          if (!currentSchedule || !currentSchedule.enabled) {
+            return;
+          }
 
-              // 执行定时任务
-              await this.executeScheduledTask(name, currentSchedule).catch(
-                (error) => {
-                  console.error(`执行定时任务失败: ${name}`, error);
-                },
-              );
+          // 执行定时任务
+          await this.executeScheduledTask(name, currentSchedule).catch(
+            (error) => {
+              console.error(`执行定时任务失败: ${name}`, error);
             },
           );
-        } catch (cronError) {
-          // 如果调用失败，回退到 setInterval
-          throw cronError;
-        }
-      } else {
-        throw new Error("Deno.cron 不可用");
-      }
+        },
+        {
+          signal: signal.signal,
+          timezone: "UTC",
+        },
+      );
+
+      // 存储任务句柄
+      this.cronTasks.set(name, { handle, signal });
     } catch (error) {
-      // 如果 Deno.cron 不可用（例如在非 Deno 环境或旧版本），回退到 setInterval
-      console.warn(
-        `Deno.cron 不可用，回退到 setInterval: ${
+      console.error(
+        `创建定时任务失败: ${name} - ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
-      this.fallbackToSetInterval(name, schedule);
+      throw error;
     }
   }
 
   /**
-   * 回退到 setInterval 实现（当 Deno.cron 不可用时）
-   */
-  private fallbackToSetInterval(
-    name: string,
-    schedule: ScheduleOptions,
-  ): void {
-    // 移除旧的 cron 任务记录
-    this.cronTasks.delete(name);
-
-    // 使用 setInterval 每分钟检查一次
-    const intervalId = setInterval(async () => {
-      const currentSchedule = this.scheduledTasks.get(name);
-      if (!currentSchedule || !currentSchedule.enabled) {
-        clearInterval(intervalId);
-        return;
-      }
-
-      // 简单的检查：如果当前时间匹配 cron 表达式（简化实现）
-      const now = new Date();
-      if (this.shouldRunCronSimple(schedule.cron, now)) {
-        await this.executeScheduledTask(name, currentSchedule).catch(
-          (error) => {
-            console.error(`执行定时任务失败: ${name}`, error);
-          },
-        );
-      }
-    }, 60000) as unknown as number;
-
-    // 存储 interval ID 以便后续清理
-    this.cronTasks.set(name, {
-      signal: new AbortController(), // 用于兼容性
-      intervalId, // 保存 interval ID 以便清理
-    });
-  }
-
-  /**
-   * 简单的 Cron 匹配检查（回退方案）
+   * 简单的 Cron 匹配检查（已废弃，现在使用 runtime-adapter 的 cron）
+   * @deprecated 此方法已不再使用，保留仅用于兼容性
    */
   private shouldRunCronSimple(cron: string, now: Date): boolean {
     const parts = cron.trim().split(/\s+/);
@@ -647,11 +629,9 @@ export class QueueManager {
   private removeCronTask(name: string): void {
     const task = this.cronTasks.get(name);
     if (task) {
+      // 使用 runtime-adapter 的 CronHandle 关闭任务
+      task.handle.close();
       task.signal.abort();
-      // 清理 setInterval（如果存在）
-      if (task.intervalId !== undefined) {
-        clearInterval(task.intervalId);
-      }
       this.cronTasks.delete(name);
     }
   }
@@ -689,11 +669,12 @@ export class QueueManager {
   /**
    * 添加定时任务
    *
-   * 使用 Deno 内置的 `Deno.cron` API 来调度任务。
-   * 注意：Deno.cron 使用 UTC 时区来指定计划时间。
+   * 使用 @dreamer/runtime-adapter 的 cron API 来调度任务。
+   * 注意：使用 UTC 时区来指定计划时间。
+   * 支持 5 字段格式（分钟 小时 日 月 星期）和 6 字段格式（秒 分钟 小时 日 月 星期）。
    *
    * @param name 任务名称
-   * @param cron Cron 表达式（标准 5 字段格式：分钟 小时 日 月 星期）
+   * @param cron Cron 表达式（标准 5 字段格式或 6 字段格式）
    * @param handler 任务处理器（可选，如果提供则直接执行，否则添加到队列）
    * @param options 选项（队列名称、数据等）
    */
@@ -720,8 +701,10 @@ export class QueueManager {
       this.scheduledHandlers.set(name, handler);
     }
 
-    // 使用 Deno.cron 创建定时任务
-    this.createCronTask(name, schedule);
+    // 使用 runtime-adapter 的 cron API 创建定时任务
+    this.createCronTask(name, schedule).catch((error) => {
+      console.error(`创建定时任务失败: ${name}`, error);
+    });
   }
 
   /**

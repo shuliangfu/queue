@@ -34,11 +34,13 @@
 - **任务隔离**：
   - 不同任务类型使用不同队列，互不阻塞
   - 一个任务类型的阻塞不会影响其他任务类型
-- **持久化支持**（必须使用）：
+- **持久化支持**（推荐使用）：
   - **Redis 适配器**：基于 Redis 的持久化存储（推荐，高性能）
   - **RabbitMQ 适配器**：基于 RabbitMQ 的持久化存储（企业级，支持高级特性）
+  - **MongoDB 适配器**：基于 MongoDB 的持久化存储（文档数据库，适合复杂查询）
+  - **内存适配器**：仅用于开发和测试，不支持持久化
   - **故障恢复**：自动恢复超时的处理中任务
-  - ⚠️ **重要**：队列必须使用持久化适配器，应用重启后任务不会丢失
+  - ⚠️ **重要**：生产环境必须使用持久化适配器，应用重启后任务不会丢失
 
 ## 使用场景
 
@@ -59,21 +61,22 @@ deno add jsr:@dreamer/queue
 - **Deno 版本**：要求 Deno 2.5 或更高版本
 - **服务端**：✅ 支持（Deno 运行时）
 - **客户端**：❌ 不支持（浏览器环境无法运行任务队列）
-- **依赖**：必须提供持久化适配器
+- **依赖**：根据使用的适配器需要相应的客户端库
   - **Redis 适配器**：需要 Redis 客户端库（如 `npm:redis` 或 `npm:ioredis`）
   - **RabbitMQ 适配器**：需要 RabbitMQ 客户端库（如 `npm:amqplib`）
-  - ⚠️ **重要**：队列必须使用持久化适配器，不支持内存队列（会丢失数据）
-- **Unstable 功能**：定时任务功能使用 `Deno.cron` API，需要启用 unstable cron 权限
-  - 在 `deno.json` 中配置：`"unstable": ["cron"]`
-  - 或在运行时使用：`deno run --unstable-cron your-script.ts`
+  - **MongoDB 适配器**：需要 MongoDB 客户端库（如 `npm:mongodb`）
+  - **内存适配器**：无需额外依赖，但仅用于开发和测试
+  - ⚠️ **重要**：生产环境必须使用持久化适配器，内存适配器不支持持久化（会丢失数据）
 
 ## 基本使用
 
 ### 创建队列管理器
 
-**⚠️ 重要**：队列必须使用持久化适配器（Redis 或 RabbitMQ），不支持内存队列。
+**⚠️ 重要**：生产环境必须使用持久化适配器（Redis、RabbitMQ 或 MongoDB）。内存适配器仅用于开发和测试。
 
 #### 使用 Redis 适配器（推荐）
+
+**方式1：使用已创建的 Redis 客户端**
 
 ```typescript
 import { QueueManager, RedisQueueAdapter } from "jsr:@dreamer/queue";
@@ -89,13 +92,50 @@ await redisClient.connect();
 
 // 创建队列管理器（使用 Redis 持久化）
 const queueManager = new QueueManager({
-  adapter: new RedisQueueAdapter({ client: redisClient }),
+  adapter: new RedisQueueAdapter({
+    client: redisClient,
+    // 可选：自定义键前缀（默认：queue）
+    // keyPrefix: "queue",
+  }),
   autoRecover: true, // 自动恢复未完成的任务
   recoverTimeout: 30000, // 30秒后恢复超时任务
 });
 ```
 
+**方式2：使用连接配置（适配器内部创建连接）**
+
+```typescript
+import { QueueManager, RedisQueueAdapter } from "jsr:@dreamer/queue";
+
+// 创建适配器（使用连接配置）
+const adapter = new RedisQueueAdapter({
+  connection: {
+    url: "redis://localhost:6379",
+    // 或者使用详细配置：
+    // host: "127.0.0.1",
+    // port: 6379,
+    // password: "your-password",
+    // db: 0,
+    // socket: {
+    //   keepAlive: false,
+    //   connectTimeout: 5000,
+    // },
+  },
+  // 可选：自定义键前缀（默认：queue）
+  // keyPrefix: "queue",
+});
+await adapter.connect();
+
+const queueManager = new QueueManager({
+  adapter,
+  autoRecover: true,
+  recoverTimeout: 30000,
+});
+```
+
 #### 使用 RabbitMQ 适配器
+
+**方式1：使用已创建的 RabbitMQ 连接**
 
 ```typescript
 import { QueueManager, RabbitMQQueueAdapter } from "jsr:@dreamer/queue";
@@ -107,13 +147,88 @@ const connection = await amqp.connect("amqp://localhost");
 // 创建队列管理器（使用 RabbitMQ 持久化）
 const queueManager = new QueueManager({
   adapter: new RabbitMQQueueAdapter({
-    connection,
-    queueOptions: { durable: true }, // 启用持久化
+    connectionObject: connection,
+    // 队列选项
+    queueOptions: {
+      durable: true, // 启用持久化
+    },
   }),
   autoRecover: true,
   recoverTimeout: 30000,
 });
 ```
+
+**方式2：使用连接配置（适配器内部创建连接）**
+
+```typescript
+import { QueueManager, RabbitMQQueueAdapter } from "jsr:@dreamer/queue";
+
+// 创建适配器（使用连接配置）
+const adapter = new RabbitMQQueueAdapter({
+  connection: {
+    url: "amqp://guest:guest@localhost:5672",
+    // 或者使用详细配置：
+    // hostname: "127.0.0.1",
+    // port: 5672,
+    // username: "guest",
+    // password: "guest",
+    // vhost: "/",
+  },
+  // 队列选项
+  queueOptions: {
+    durable: true, // 启用持久化
+  },
+});
+await adapter.connect();
+
+const queueManager = new QueueManager({
+  adapter,
+  autoRecover: true,
+  recoverTimeout: 30000,
+});
+```
+
+#### 使用 MongoDB 适配器
+
+```typescript
+import { QueueManager, MongoDBQueueAdapter } from "jsr:@dreamer/queue";
+
+// 创建队列管理器（使用 MongoDB 持久化）
+const adapter = new MongoDBQueueAdapter({
+  connection: {
+    url: "mongodb://localhost:27017",
+    database: "queue",
+    // 可选配置：
+    // host: "127.0.0.1",
+    // port: 27017,
+    // username: "user",
+    // password: "password",
+    // authSource: "admin",
+    // options: {
+    //   connectTimeoutMS: 5000,
+    //   socketTimeoutMS: 0,
+    //   maxPoolSize: 10,
+    //   minPoolSize: 1,
+    // },
+  },
+  // 可选：自定义集合名称（默认：queues）
+  // collectionPrefix: "queues",
+  // 可选：自定义数据库名称（默认：queue）
+  // databaseName: "queue",
+});
+await adapter.connect();
+
+const queueManager = new QueueManager({
+  adapter,
+  autoRecover: true,
+  recoverTimeout: 30000,
+});
+```
+
+**MongoDB 适配器说明**：
+- 所有队列的任务都存储在同一个集合中（默认：`queues`），通过 `queueName` 字段区分不同队列
+- 这种设计简化了表管理，避免了为每个队列创建单独的表
+- 适配器会自动创建索引以优化查询性能
 
 ### 创建队列
 
@@ -177,14 +292,11 @@ await emailQueue.add("send-reminder", { userId: 123 }, {
 
 ### 定时任务
 
-定时任务使用 Deno 内置的 `Deno.cron` API 实现，支持标准的 Cron 表达式。
+定时任务使用 `@dreamer/runtime-adapter` 的 cron API 实现，支持标准的 Cron 表达式，兼容 Deno 和 Bun 环境。
 
 **重要提示**：
-- `Deno.cron` 使用 **UTC 时区** 来指定计划时间，以避免与夏令时相关的问题
-- **需要启用 unstable cron 权限**：
-  - 在 `deno.json` 中配置：`"unstable": ["cron"]`
-  - 或在运行时使用：`deno run --unstable-cron your-script.ts`
-- 如果未启用 cron 权限，库会自动回退到 `setInterval` 实现
+- 定时任务使用 **UTC 时区** 来指定计划时间，以避免与夏令时相关的问题
+- 支持标准的 5 字段格式（分钟 小时 日 月 星期）和 6 字段格式（秒 分钟 小时 日 月 星期）
 
 ```typescript
 // 添加定时任务（每天凌晨执行）
@@ -289,9 +401,9 @@ emailQueue.process(async (job) => {
 
 ## 持久化适配器
 
-### 内存适配器（默认）
+### 内存适配器
 
-内存适配器无需任何依赖，适合开发和测试环境：
+内存适配器无需任何依赖，适合开发和测试环境。**注意**：内存适配器不支持持久化，应用重启后任务会丢失。
 
 ```typescript
 import { QueueManager, MemoryQueueAdapter } from "jsr:@dreamer/queue";
@@ -299,6 +411,83 @@ import { QueueManager, MemoryQueueAdapter } from "jsr:@dreamer/queue";
 const queueManager = new QueueManager({
   adapter: new MemoryQueueAdapter(), // 显式使用内存适配器
 });
+```
+
+### 适配器配置选项
+
+#### Redis 适配器配置
+
+```typescript
+interface RedisAdapterOptions {
+  // Redis 连接配置（如果提供，适配器会内部创建连接）
+  connection?: {
+    url?: string;                    // Redis 连接 URL
+    host?: string;                   // 主机地址（默认：127.0.0.1）
+    port?: number;                   // 端口（默认：6379）
+    password?: string;               // 密码（可选）
+    db?: number;                     // 数据库编号（默认：0）
+    socket?: {
+      keepAlive?: boolean;           // 是否启用 keepAlive（默认：false）
+      connectTimeout?: number;       // 连接超时时间（毫秒，默认：5000）
+    };
+  };
+  // Redis 客户端实例（如果提供 connection，则不需要提供 client）
+  client?: RedisClient;
+  // 键前缀（可选，默认：queue）
+  keyPrefix?: string;
+}
+```
+
+#### RabbitMQ 适配器配置
+
+```typescript
+interface RabbitMQAdapterOptions {
+  // RabbitMQ 连接配置（如果提供，适配器会内部创建连接）
+  connection?: {
+    url?: string;                    // RabbitMQ 连接 URL
+    hostname?: string;               // 主机地址（默认：127.0.0.1）
+    port?: number;                   // 端口（默认：5672）
+    username?: string;               // 用户名（默认：guest）
+    password?: string;               // 密码（默认：guest）
+    vhost?: string;                  // 虚拟主机（默认：/）
+  };
+  // RabbitMQ 连接对象（如果提供 connection，则不需要提供此参数）
+  connectionObject?: Connection;
+  // 队列选项
+  queueOptions?: {
+    durable?: boolean;               // 是否持久化（默认：false）
+  };
+}
+```
+
+#### MongoDB 适配器配置
+
+```typescript
+interface MongoDBAdapterOptions {
+  // MongoDB 连接配置（如果提供，适配器会内部创建连接）
+  connection?: {
+    url?: string;                    // MongoDB 连接 URL
+    host?: string;                   // 主机地址（默认：127.0.0.1）
+    port?: number;                   // 端口（默认：27017）
+    database?: string;               // 数据库名称（默认：queue）
+    username?: string;               // 用户名（可选）
+    password?: string;               // 密码（可选）
+    authSource?: string;             // 认证数据库（可选，默认：admin）
+    options?: {
+      connectTimeoutMS?: number;    // 连接超时时间（毫秒，默认：5000）
+      socketTimeoutMS?: number;     // Socket 超时时间（毫秒，默认：0）
+      maxPoolSize?: number;         // 最大连接池大小（默认：10）
+      minPoolSize?: number;         // 最小连接池大小（默认：1）
+    };
+  };
+  // MongoDB 客户端实例（如果提供 connection，则不需要提供 client）
+  client?: MongoClient;
+  // 集合名称（可选，默认：queues）
+  // 所有队列的任务都存储在同一个集合中，通过 queueName 字段区分
+  collectionPrefix?: string;
+  // 数据库名称（可选，默认：queue）
+  databaseName?: string;
+}
 ```
 
 ### 自定义适配器
@@ -329,9 +518,9 @@ const queueManager = new QueueManager({
 
 ## Cron 表达式
 
-定时任务使用 Deno 内置的 `Deno.cron` API，支持标准的 Cron 表达式格式：
+定时任务使用 `@dreamer/runtime-adapter` 的 cron API，支持标准的 Cron 表达式格式：
 
-- `* * * * *` - 每分钟执行
+- `* * * * *` - 每分钟执行（5 字段格式）
 - `0 * * * *` - 每小时执行
 - `0 0 * * *` - 每天执行
 - `0 0 1 * *` - 每月1号执行
@@ -339,11 +528,12 @@ const queueManager = new QueueManager({
 - `0 0-12 * * *` - 每天0点到12点每小时执行
 - `*/5 * * * *` - 每5分钟执行
 - `0 0 1,15 * *` - 每月1号和15号执行
+- `*/30 * * * * *` - 每30秒执行（6 字段格式，秒 分钟 小时 日 月 星期）
 
 **重要提示**：
-- `Deno.cron` 使用 **UTC 时区** 来指定计划时间，以避免与夏令时相关的问题
-- 如果 `Deno.cron` 不可用（例如在旧版本的 Deno 中），库会自动回退到 `setInterval` 实现
-- Cron 表达式格式：`分钟 小时 日 月 星期`（5 个字段）
+- 定时任务使用 **UTC 时区** 来指定计划时间，以避免与夏令时相关的问题
+- 支持 5 字段格式：`分钟 小时 日 月 星期`
+- 支持 6 字段格式：`秒 分钟 小时 日 月 星期`
 
 ## API 文档
 
@@ -617,18 +807,18 @@ await queueManager.close();
 
 ## 注意事项
 
-- **持久化适配器**：**必须使用持久化适配器**（Redis 或 RabbitMQ），不支持内存队列
-  - 队列库已内置 `RedisQueueAdapter` 和 `RabbitMQQueueAdapter`
-  - 创建 `QueueManager` 时必须提供适配器实例
-  - 应用重启后任务会自动恢复，不会丢失数据
+- **持久化适配器**：**必须提供适配器实例**（Redis、RabbitMQ 或 MongoDB）
+  - 队列库已内置 `RedisQueueAdapter`、`RabbitMQQueueAdapter` 和 `MongoDBQueueAdapter`
+  - 创建 `QueueManager` 时必须提供适配器实例（不支持默认适配器）
+  - 推荐使用持久化适配器（Redis、RabbitMQ、MongoDB），应用重启后任务会自动恢复
+  - 内存适配器（`MemoryQueueAdapter`）仅用于开发和测试，不支持持久化
 - **并发控制**：每个队列独立的并发控制，互不影响
 - **任务重试**：任务失败后会自动重试，直到达到最大重试次数
 - **任务超时**：任务执行超时后会被标记为失败
 - **定时任务**：
-  - 使用 `Deno.cron` API，需要启用 unstable cron 权限
-  - 在 `deno.json` 中配置：`"unstable": ["cron"]`
-  - 或在运行时使用：`deno run --unstable-cron your-script.ts`
-  - 如果未启用权限，会自动回退到 `setInterval` 实现（可能有最多1分钟的延迟）
+  - 使用 `@dreamer/runtime-adapter` 的 cron API，兼容 Deno 和 Bun 环境
+  - 支持标准的 5 字段和 6 字段 Cron 表达式格式
+  - 使用 UTC 时区来指定计划时间
 - **Cron 表达式**：支持标准格式，使用 UTC 时区
 
 ## 更多信息

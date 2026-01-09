@@ -19,9 +19,16 @@ export type {
 export { MemoryQueueAdapter } from "./memory.ts";
 
 // 导出 Redis 适配器
-export type { RedisAdapterOptions } from "./redis.ts";
 export { RedisQueueAdapter } from "./redis.ts";
+export type { RedisAdapterOptions } from "./redis.ts";
 
 // 导出 RabbitMQ 适配器
-export type { RabbitMQAdapterOptions } from "./rabbitmq.ts";
 export { RabbitMQQueueAdapter } from "./rabbitmq.ts";
+export type { RabbitMQAdapterOptions } from "./rabbitmq.ts";
+
+// 导出 MongoDB 适配器
+export { MongoDBQueueAdapter } from "./mongodb.ts";
+export type {
+  MongoDBAdapterOptions,
+  MongoDBConnectionConfig,
+} from "./mongodb.ts";
