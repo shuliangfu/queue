@@ -820,6 +820,21 @@ await queueManager.close();
   - 支持标准的 5 字段和 6 字段 Cron 表达式格式
   - 使用 UTC 时区来指定计划时间
 - **Cron 表达式**：支持标准格式，使用 UTC 时区
+- **测试注意事项**：
+  - 在 Deno 环境下测试时，如果使用 Redis 或 RabbitMQ 适配器，可能会遇到定时器泄漏警告
+  - 这是因为第三方客户端库（如 `npm:redis`、`npm:amqplib`）可能产生内部定时器
+  - 如果使用 `@dreamer/test` 进行测试，可以使用 `sanitizeOps: false` 和 `sanitizeResources: false` 选项来禁用定时器检查
+  - 示例：
+    ```typescript
+    import { it } from "@dreamer/test";
+
+    it("应该使用 Redis 适配器处理任务", async () => {
+      // 测试代码...
+    }, {
+      sanitizeOps: false,        // 禁用定时器泄漏检查
+      sanitizeResources: false,  // 禁用资源泄漏检查
+    });
+    ```
 
 ## 更多信息
 
