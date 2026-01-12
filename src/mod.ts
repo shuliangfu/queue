@@ -544,10 +544,10 @@ export class QueueManager {
    * 使用 @dreamer/runtime-adapter 的 cron API，兼容 Deno 和 Bun 环境。
    * 注意：使用 UTC 时区。
    */
-  private async createCronTask(
+  private createCronTask(
     name: string,
     schedule: ScheduleOptions,
-  ): Promise<void> {
+  ): void {
     // 如果任务已存在，先移除
     this.removeCronTask(name);
 
@@ -557,7 +557,7 @@ export class QueueManager {
     // 使用 runtime-adapter 的 cron API 创建定时任务
     // runtime-adapter 使用 node-cron，支持 5 字段和 6 字段格式
     try {
-      const handle = await cron(
+      const handle = cron(
         schedule.cron,
         async () => {
           // 检查任务是否仍然启用
@@ -702,9 +702,11 @@ export class QueueManager {
     }
 
     // 使用 runtime-adapter 的 cron API 创建定时任务
-    this.createCronTask(name, schedule).catch((error) => {
+    try {
+      this.createCronTask(name, schedule);
+    } catch (error) {
       console.error(`创建定时任务失败: ${name}`, error);
-    });
+    }
   }
 
   /**
