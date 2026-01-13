@@ -36,12 +36,20 @@ export {
   RabbitMQQueueAdapter,
   RedisQueueAdapter,
 } from "./adapters/mod.ts";
+// 导出适配器类型（从 adapters/mod.ts 重新导出）
 export type {
   MongoDBAdapterOptions,
-  MongoDBConnectionConfig,
   RabbitMQAdapterOptions,
   RedisAdapterOptions,
 } from "./adapters/mod.ts";
+// 导出连接配置类型（直接从源文件导出，避免类型解析问题）
+export type { MongoDBConnectionConfig } from "./adapters/mongodb.ts";
+export type { RabbitMQConnectionConfig } from "./adapters/rabbitmq.ts";
+export type { RedisConnectionConfig } from "./adapters/redis.ts";
+// 导入类型供当前文件使用
+import type { MongoDBConnectionConfig } from "./adapters/mongodb.ts";
+import type { RabbitMQConnectionConfig } from "./adapters/rabbitmq.ts";
+import type { RedisConnectionConfig } from "./adapters/redis.ts";
 
 /**
  * 任务处理函数
@@ -78,6 +86,34 @@ export interface QueueManagerOptions {
   autoRecover?: boolean;
   /** 恢复超时任务的时间（毫秒） */
   recoverTimeout?: number;
+}
+
+/**
+ * 队列配置选项
+ * 统一的配置接口，支持所有适配器类型
+ */
+export interface QueueConfig extends Omit<QueueManagerOptions, "adapter"> {
+  /** 适配器类型（memory、redis、mongodb、rabbitmq） */
+  adapter?: "memory" | "redis" | "mongodb" | "rabbitmq";
+  /** Redis 连接配置（仅 redis 适配器） */
+  connection?: RedisConnectionConfig;
+  /** Redis 客户端实例（仅 redis 适配器，如果提供 connection，则不需要提供 client） */
+  client?: unknown;
+  /** MongoDB 连接配置（仅 mongodb 适配器） */
+  mongodbConnection?: MongoDBConnectionConfig;
+  /** MongoDB 客户端实例（仅 mongodb 适配器，如果提供 mongodbConnection，则不需要提供 mongodbClient） */
+  mongodbClient?: unknown;
+  /** MongoDB 集合名称（仅 mongodb 适配器，默认：jobs） */
+  collection?: string;
+  /** RabbitMQ 连接配置（仅 rabbitmq 适配器） */
+  rabbitmqConnection?: RabbitMQConnectionConfig;
+  /** RabbitMQ 连接对象（仅 rabbitmq 适配器，如果提供 rabbitmqConnection，则不需要提供 rabbitmqConnectionObject） */
+  rabbitmqConnectionObject?: unknown;
+  /** RabbitMQ 队列选项（仅 rabbitmq 适配器） */
+  queueOptions?: {
+    /** 是否持久化 */
+    durable?: boolean;
+  };
 }
 
 /**
