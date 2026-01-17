@@ -6,6 +6,7 @@
  * 使用 MongoDB 作为任务存储后端，支持任务持久化和故障恢复。
  */
 
+import { MongoClient } from "mongodb";
 import type { Job, JobPriority, QueueAdapter } from "./base.ts";
 
 /**
@@ -36,7 +37,70 @@ export interface MongoDBConnectionConfig {
     maxPoolSize?: number;
     /** 最小连接池大小（默认：1） */
     minPoolSize?: number;
+    /** 副本集名称（可选，用于单节点副本集） */
+    replicaSet?: string;
+    /** 是否直接连接（默认：false，设置为 true 可减少连接时间） */
+    directConnection?: boolean;
+    /** 服务器选择超时时间（毫秒） */
+    serverSelectionTimeoutMS?: number;
+    /** 其他 MongoDB 客户端选项 */
+    [key: string]: unknown;
   };
+}
+
+/**
+ * MongoDB 集合接口（用于队列适配器）
+ */
+export interface MongoDBQueueCollection {
+  /** 插入文档 */
+  insertOne(doc: any): Promise<{ insertedId: any }>;
+  /** 插入多个文档 */
+  insertMany(docs: any[]): Promise<{ insertedIds: any }>;
+  /** 查找一个文档 */
+  findOne(filter: any): Promise<any | null>;
+  /** 查找多个文档 */
+  find(filter: any): {
+    toArray(): Promise<any[]>;
+    sort(sort: any): any;
+    limit(n: number): any;
+  };
+  /** 更新一个文档 */
+  updateOne(filter: any, update: any): Promise<{ modifiedCount: number }>;
+  /** 更新多个文档 */
+  updateMany(
+    filter: any,
+    update: any,
+  ): Promise<{ modifiedCount: number }>;
+  /** 删除一个文档 */
+  deleteOne(filter: any): Promise<{ deletedCount: number }>;
+  /** 删除多个文档 */
+  deleteMany(filter: any): Promise<{ deletedCount: number }>;
+  /** 统计文档数量 */
+  countDocuments(filter?: any): Promise<number>;
+  /** 创建索引 */
+  createIndex(keys: any, options?: any): Promise<string>;
+  /** 删除索引 */
+  dropIndex(name: string): Promise<any>;
+}
+
+/**
+ * MongoDB 数据库接口（用于队列适配器）
+ */
+export interface MongoDBQueueDatabase {
+  /** 获取集合 */
+  collection(name: string): MongoDBQueueCollection;
+}
+
+/**
+ * MongoDB 客户端接口（用于队列适配器）
+ *
+ * 此类型定义了队列适配器所需的 MongoDB 客户端接口，可以在框架中直接使用。
+ */
+export interface MongoDBQueueClient {
+  /** 获取数据库 */
+  db(name?: string): MongoDBQueueDatabase;
+  /** 关闭连接 */
+  close(): Promise<void>;
 }
 
 /**
@@ -46,45 +110,7 @@ export interface MongoDBAdapterOptions {
   /** MongoDB 连接配置（如果提供，适配器会内部创建连接） */
   connection?: MongoDBConnectionConfig;
   /** MongoDB 客户端实例（如果提供 connection，则不需要提供 client） */
-  client?: {
-    /** 获取数据库 */
-    db(name?: string): {
-      /** 获取集合 */
-      collection(name: string): {
-        /** 插入文档 */
-        insertOne(doc: any): Promise<{ insertedId: any }>;
-        /** 插入多个文档 */
-        insertMany(docs: any[]): Promise<{ insertedIds: any }>;
-        /** 查找一个文档 */
-        findOne(filter: any): Promise<any | null>;
-        /** 查找多个文档 */
-        find(filter: any): {
-          toArray(): Promise<any[]>;
-          sort(sort: any): any;
-          limit(n: number): any;
-        };
-        /** 更新一个文档 */
-        updateOne(filter: any, update: any): Promise<{ modifiedCount: number }>;
-        /** 更新多个文档 */
-        updateMany(
-          filter: any,
-          update: any,
-        ): Promise<{ modifiedCount: number }>;
-        /** 删除一个文档 */
-        deleteOne(filter: any): Promise<{ deletedCount: number }>;
-        /** 删除多个文档 */
-        deleteMany(filter: any): Promise<{ deletedCount: number }>;
-        /** 统计文档数量 */
-        countDocuments(filter?: any): Promise<number>;
-        /** 创建索引 */
-        createIndex(keys: any, options?: any): Promise<string>;
-        /** 删除索引 */
-        dropIndex(name: string): Promise<any>;
-      };
-    };
-    /** 关闭连接 */
-    close(): Promise<void>;
-  };
+  client?: MongoDBQueueClient;
   /** 集合名称（可选，默认：queues）。所有队列的任务都存储在同一个集合中，通过 queueName 字段区分 */
   collectionPrefix?: string;
   /** 数据库名称（可选，默认：queue） */
@@ -147,15 +173,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
   async connect(): Promise<void> {
     if (this.connectionConfig && !this.internalClient) {
       try {
-        // 动态导入 MongoDB 客户端库
-        // 在 Bun 中，直接使用包名；在 Deno 中，使用 deno.json 中配置的 imports map
-        const isBun = typeof (globalThis as any).Bun !== "undefined";
-        const mongoModule = isBun
-          ? await import("mongodb")
-          : await import("mongodb");
-
-        const { MongoClient } = mongoModule;
-
+        // 使用静态导入的 MongoClient（已在文件顶部导入）
         // 构建连接 URL
         let connectionUrl: string;
         if (this.connectionConfig.url) {

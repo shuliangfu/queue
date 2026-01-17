@@ -9,7 +9,7 @@
  * 定时任务功能使用 @dreamer/runtime-adapter 的 cron API，兼容 Deno 和 Bun 环境。
  */
 
-// 从适配器模块导入类型和接口
+// 导入类型供当前文件内部使用
 import type {
   Job,
   JobData,
@@ -19,37 +19,13 @@ import type {
 
 // 导入 runtime-adapter 的 cron API
 import { cron, type CronHandle, IS_DENO } from "@dreamer/runtime-adapter";
-
-// 重新导出类型（供外部使用）
-export type {
-  Job,
-  JobData,
-  JobPriority,
-  JobStatus,
-  QueueAdapter,
-} from "./adapters/mod.ts";
-
-// 导出适配器（方便使用）
-export {
-  MemoryQueueAdapter,
-  MongoDBQueueAdapter,
-  RabbitMQQueueAdapter,
-  RedisQueueAdapter,
-} from "./adapters/mod.ts";
-// 导出适配器类型（从 adapters/mod.ts 重新导出）
-export type {
-  MongoDBAdapterOptions,
-  RabbitMQAdapterOptions,
-  RedisAdapterOptions,
-} from "./adapters/mod.ts";
-// 导出连接配置类型（直接从源文件导出，避免类型解析问题）
-export type { MongoDBConnectionConfig } from "./adapters/mongodb.ts";
-export type { RabbitMQConnectionConfig } from "./adapters/rabbitmq.ts";
-export type { RedisConnectionConfig } from "./adapters/redis.ts";
 // 导入类型供当前文件使用
 import type { MongoDBConnectionConfig } from "./adapters/mongodb.ts";
 import type { RabbitMQConnectionConfig } from "./adapters/rabbitmq.ts";
 import type { RedisConnectionConfig } from "./adapters/redis.ts";
+
+// 导出所有内容（从 adapters/mod.ts 统一导出，包括类型和值）
+export * from "./adapters/mod.ts";
 
 /**
  * 任务处理函数

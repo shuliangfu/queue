@@ -6,6 +6,7 @@
  * 使用 Redis 作为任务存储后端，支持任务持久化和故障恢复。
  */
 
+import { createClient } from "redis";
 import type { Job, JobPriority, QueueAdapter } from "./base.ts";
 
 /**
@@ -32,42 +33,49 @@ export interface RedisConnectionConfig {
 }
 
 /**
+ * Redis 客户端接口（用于队列适配器）
+ *
+ * 此类型定义了队列适配器所需的 Redis 客户端接口，可以在框架中直接使用。
+ */
+export interface RedisQueueClient {
+  /** 设置键值 */
+  set(key: string, value: string): Promise<void> | void;
+  /** 获取值 */
+  get(key: string): Promise<string | null> | string | null;
+  /** 从列表左侧推入 */
+  lpush(key: string, value: string): Promise<number> | number;
+  /** 从列表右侧弹出 */
+  rpop(key: string): Promise<string | null> | string | null;
+  /** 获取列表所有元素 */
+  lrange(
+    key: string,
+    start: number,
+    stop: number,
+  ): Promise<string[]> | string[];
+  /** 删除键 */
+  del(key: string): Promise<number> | number;
+  /** 获取列表长度 */
+  llen(key: string): Promise<number> | number;
+  /** 从列表中移除元素（LREM 命令） */
+  lrem?(
+    key: string,
+    count: number,
+    value: string,
+  ): Promise<number> | number;
+  /** 断开连接 */
+  disconnect?: () => Promise<void> | void;
+  /** 退出连接 */
+  quit?: () => Promise<void> | void;
+}
+
+/**
  * Redis 队列适配器配置
  */
 export interface RedisAdapterOptions {
   /** Redis 连接配置（如果提供，适配器会内部创建连接） */
   connection?: RedisConnectionConfig;
   /** Redis 客户端实例（如果提供 connection，则不需要提供 client） */
-  client?: {
-    /** 设置键值 */
-    set(key: string, value: string): Promise<void> | void;
-    /** 获取值 */
-    get(key: string): Promise<string | null> | string | null;
-    /** 从列表左侧推入 */
-    lpush(key: string, value: string): Promise<number> | number;
-    /** 从列表右侧弹出 */
-    rpop(key: string): Promise<string | null> | string | null;
-    /** 获取列表所有元素 */
-    lrange(
-      key: string,
-      start: number,
-      stop: number,
-    ): Promise<string[]> | string[];
-    /** 删除键 */
-    del(key: string): Promise<number> | number;
-    /** 获取列表长度 */
-    llen(key: string): Promise<number> | number;
-    /** 从列表中移除元素（LREM 命令） */
-    lrem?(
-      key: string,
-      count: number,
-      value: string,
-    ): Promise<number> | number;
-    /** 断开连接 */
-    disconnect?: () => Promise<void> | void;
-    /** 退出连接 */
-    quit?: () => Promise<void> | void;
-  };
+  client?: RedisQueueClient;
   /** 键前缀（可选，默认：queue） */
   keyPrefix?: string;
 }
@@ -121,13 +129,7 @@ export class RedisQueueAdapter implements QueueAdapter {
   async connect(): Promise<void> {
     if (this.connectionConfig && !this.internalClient) {
       try {
-        // 动态导入 Redis 客户端库
-        // 在 Bun 中，直接使用包名；在 Deno 中，使用 npm: 前缀
-        const isBun = typeof (globalThis as any).Bun !== "undefined";
-        const redisModule = isBun
-          ? await import("redis")
-          : await import("npm:redis@^5.0.0");
-        const { createClient } = redisModule;
+        // 使用静态导入的 createClient（已在文件顶部导入）
 
         // 构建连接配置
         const clientOptions: any = {};

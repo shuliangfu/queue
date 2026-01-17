@@ -6,6 +6,7 @@
  * 使用 RabbitMQ 作为任务存储后端，支持任务持久化和故障恢复。
  */
 
+import amqp from "amqplib";
 import type { Job, QueueAdapter } from "./base.ts";
 
 /**
@@ -27,55 +28,67 @@ export interface RabbitMQConnectionConfig {
 }
 
 /**
+ * RabbitMQ 通道接口（用于队列适配器）
+ */
+export interface RabbitMQQueueChannel {
+  /** 声明队列 */
+  assertQueue(
+    queue: string,
+    options?: { durable?: boolean },
+  ): Promise<{ queue: string }>;
+  /** 发送消息到队列 */
+  sendToQueue(
+    queue: string,
+    content: Uint8Array,
+    options?: { persistent?: boolean },
+  ): boolean;
+  /** 消费队列消息 */
+  consume(
+    queue: string,
+    onMessage: (
+      msg: { content: Uint8Array; ack(): void; nack(): void },
+    ) => void,
+    options?: { noAck?: boolean },
+  ): Promise<string>;
+  /** 取消消费 */
+  cancel(consumerTag: string): Promise<void>;
+  /** 删除队列 */
+  deleteQueue(queue: string): Promise<void>;
+  /** 获取队列消息数量 */
+  checkQueue(queue: string): Promise<{ messageCount: number }>;
+  /** 从队列中获取一条消息（非阻塞） */
+  get(
+    queue: string,
+    options?: { noAck?: boolean },
+  ): Promise<
+    {
+      content: Uint8Array;
+      ack(): void;
+      nack(requeue?: boolean): void;
+    } | null
+  >;
+}
+
+/**
+ * RabbitMQ 连接接口（用于队列适配器）
+ *
+ * 此类型定义了队列适配器所需的 RabbitMQ 连接接口，可以在框架中直接使用。
+ */
+export interface RabbitMQQueueConnection {
+  /** 创建通道 */
+  createChannel(): Promise<RabbitMQQueueChannel>;
+  /** 关闭连接 */
+  close(): Promise<void>;
+}
+
+/**
  * RabbitMQ 队列适配器配置
  */
 export interface RabbitMQAdapterOptions {
   /** RabbitMQ 连接配置（如果提供，适配器会内部创建连接） */
   connection?: RabbitMQConnectionConfig;
   /** RabbitMQ 连接对象（如果提供 connection，则不需要提供此参数） */
-  connectionObject?: {
-    /** 创建通道 */
-    createChannel(): Promise<{
-      /** 声明队列 */
-      assertQueue(
-        queue: string,
-        options?: { durable?: boolean },
-      ): Promise<{ queue: string }>;
-      /** 发送消息到队列 */
-      sendToQueue(
-        queue: string,
-        content: Uint8Array,
-        options?: { persistent?: boolean },
-      ): boolean;
-      /** 消费队列消息 */
-      consume(
-        queue: string,
-        onMessage: (
-          msg: { content: Uint8Array; ack(): void; nack(): void },
-        ) => void,
-        options?: { noAck?: boolean },
-      ): Promise<string>;
-      /** 取消消费 */
-      cancel(consumerTag: string): Promise<void>;
-      /** 删除队列 */
-      deleteQueue(queue: string): Promise<void>;
-      /** 获取队列消息数量 */
-      checkQueue(queue: string): Promise<{ messageCount: number }>;
-      /** 从队列中获取一条消息（非阻塞） */
-      get(
-        queue: string,
-        options?: { noAck?: boolean },
-      ): Promise<
-        {
-          content: Uint8Array;
-          ack(): void;
-          nack(requeue?: boolean): void;
-        } | null
-      >;
-    }>;
-    /** 关闭连接 */
-    close(): Promise<void>;
-  };
+  connectionObject?: RabbitMQQueueConnection;
   /** 队列选项 */
   queueOptions?: {
     /** 是否持久化 */
@@ -108,11 +121,7 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
   private connection: RabbitMQAdapterOptions["connectionObject"];
   private connectionConfig?: RabbitMQConnectionConfig;
   private internalConnection: any = null; // 内部创建的连接
-  private channel?: Awaited<
-    ReturnType<
-      NonNullable<RabbitMQAdapterOptions["connectionObject"]>["createChannel"]
-    >
-  >;
+  private channel?: RabbitMQQueueChannel;
   private queueOptions: { durable: boolean };
   private jobCache: Map<string, Job> = new Map(); // 临时缓存，用于存储任务数据
 
@@ -157,15 +166,6 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
   async connect(): Promise<void> {
     if (this.connectionConfig && !this.internalConnection) {
       try {
-        // 动态导入 RabbitMQ 客户端库
-        // 在 Bun 中，直接使用包名；在 Deno 中，使用 npm: 前缀
-        const isBun = typeof (globalThis as any).Bun !== "undefined";
-        const amqpModule = isBun
-          ? await import("amqplib")
-          : await import("npm:amqplib@^0.10.0");
-        // amqplib 的导入方式：在 Deno 中是 default，在 Bun 中可能是 default 或命名导出
-        const amqp = (amqpModule as any).default || amqpModule;
-
         // 构建连接 URL
         let connectionUrl: string;
         if (this.connectionConfig.url) {
@@ -183,18 +183,14 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         // 尝试连接（先试 127.0.0.1，失败后试 localhost）
         let connection;
         try {
-          // amqplib 的 connect 方法可能在 default 或直接导出
-          const connect = amqp.connect || (amqp as any).default?.connect ||
-            (amqp as any).default;
-          connection = await connect(connectionUrl);
+          // amqplib 的 connect 方法（静态导入）
+          connection = await amqp.connect(connectionUrl);
         } catch (error) {
           // 如果 127.0.0.1 失败，尝试 localhost
           if (connectionUrl.includes("127.0.0.1")) {
             try {
               connectionUrl = connectionUrl.replace("127.0.0.1", "localhost");
-              const connect = amqp.connect || (amqp as any).default?.connect ||
-                (amqp as any).default;
-              connection = await connect(connectionUrl);
+              connection = await amqp.connect(connectionUrl);
             } catch (_e) {
               // 如果都失败，抛出原始错误
               throw error;

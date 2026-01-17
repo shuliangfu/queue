@@ -2,95 +2,129 @@
  * @fileoverview RabbitMQ 队列适配器测试
  */
 
-import { IS_DENO } from "@dreamer/runtime-adapter";
-import { describe, expect, it } from "@dreamer/test";
-import { QueueManager } from "../src/mod.ts";
-import { checkDockerContainer } from "./helpers.ts";
+import { getEnv, IS_DENO } from "@dreamer/runtime-adapter";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "@dreamer/test";
+import { RabbitMQQueueAdapter } from "../src/adapters/rabbitmq.ts";
+import { type Job, QueueManager } from "../src/mod.ts";
+
+/**
+ * 获取环境变量，带默认值
+ */
+function getEnvWithDefault(key: string, defaultValue: string = ""): string {
+  return getEnv(key) || defaultValue;
+}
 
 describe("Queue > RabbitMQQueueAdapter", () => {
-  it("应该检查 RabbitMQ 容器是否运行", async () => {
-    const isRunning = await checkDockerContainer("rabbitmq");
-    if (!isRunning) {
-      console.log("⚠️  RabbitMQ 容器未运行，跳过 RabbitMQ 测试");
-      console.log(
-        "   启动 RabbitMQ: docker run -d -p 5672:5672 -p 15672:15672 --name rabbitmq rabbitmq:latest",
-      );
-      return;
-    }
-    expect(isRunning).toBeTruthy();
-  });
+  let adapter: RabbitMQQueueAdapter | null = null;
 
-  it("应该创建 RabbitMQ 队列适配器", async () => {
-    const isRunning = await checkDockerContainer("rabbitmq");
-    if (!isRunning) {
-      console.log("⚠️  跳过：RabbitMQ 容器未运行");
-      return;
-    }
+  beforeAll(async () => {
+    const rabbitmqHost = getEnvWithDefault("RABBITMQ_HOST", "localhost");
+    const rabbitmqPort = parseInt(getEnvWithDefault("RABBITMQ_PORT", "5672"));
+    // 默认使用 guest/guest（如果容器中没有 guest 用户，可以通过环境变量配置其他用户）
+    const rabbitmqUser = getEnvWithDefault("RABBITMQ_USER", "guest");
+    const rabbitmqPassword = getEnvWithDefault("RABBITMQ_PASSWORD", "guest");
+    const rabbitmqVhost = getEnvWithDefault("RABBITMQ_VHOST", "/");
 
-    let adapter: any = null;
     try {
-      const { RabbitMQQueueAdapter } = await import(
-        "../src/adapters/rabbitmq.ts"
+      // 构建连接 URL（使用 localhost 而不是 127.0.0.1，因为 RabbitMQ 的 guest 用户默认只能从 localhost 连接）
+      // vhost 需要 URL 编码，如果包含特殊字符
+      // 如果 vhost 是 "/"，则不需要 URL 编码，直接使用 "/"
+      const encodedVhost = rabbitmqVhost === "/"
+        ? ""
+        : encodeURIComponent(rabbitmqVhost);
+      const connectionUrl = encodedVhost
+        ? `amqp://${rabbitmqUser}:${rabbitmqPassword}@${rabbitmqHost}:${rabbitmqPort}/${encodedVhost}`
+        : `amqp://${rabbitmqUser}:${rabbitmqPassword}@${rabbitmqHost}:${rabbitmqPort}/`;
+
+      console.log(
+        `尝试连接 RabbitMQ: ${connectionUrl.replace(/:[^:@]+@/, ":***@")}`,
       );
+
       adapter = new RabbitMQQueueAdapter({
         connection: {
-          url: "amqp://guest:guest@127.0.0.1:5672",
+          url: connectionUrl,
         },
         queueOptions: { durable: true },
       });
-      await adapter.connect();
-      expect(adapter).toBeTruthy();
 
-      // 等待适配器初始化完成
-      // 在 Deno 环境下，需要等待更长时间以确保所有定时器完成
-      await new Promise((resolve) => setTimeout(resolve, IS_DENO ? 300 : 200));
-
-      // 清理
-      await adapter.disconnect();
-      // 等待连接完全关闭和所有定时器完成
-      // 在 Deno 环境下，需要等待更长时间以确保所有定时器完成（客户端库的内部定时器）
-      await new Promise((resolve) => setTimeout(resolve, IS_DENO ? 1000 : 300));
-    } catch (error) {
-      console.log(
-        `⚠️  跳过：无法创建 RabbitMQ 适配器 - ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+      // 连接适配器（设置超时）
+      const connectPromise = adapter.connect();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("连接超时（10秒）")), 10000)
       );
-      if (adapter?.disconnect) {
+      await Promise.race([connectPromise, timeoutPromise]);
+
+      console.log("✅ RabbitMQ 连接成功");
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : String(error);
+      console.error(
+        `❌ RabbitMQ 连接失败: ${errorMessage}`,
+      );
+      console.error(
+        `   连接配置: host=${rabbitmqHost}, port=${rabbitmqPort}, user=${rabbitmqUser}, vhost=${rabbitmqVhost}`,
+      );
+      console.warn("   跳过所有 RabbitMQ 测试");
+      adapter = null;
+    }
+  });
+
+  afterAll(async () => {
+    if (adapter) {
+      try {
         await adapter.disconnect();
-        // 在 Deno 环境下，需要等待更长时间以确保所有定时器完成
+        // 等待连接完全关闭和所有定时器完成
         await new Promise((resolve) =>
-          setTimeout(resolve, IS_DENO ? 500 : 300)
+          setTimeout(resolve, IS_DENO ? 1000 : 300)
         );
+      } catch {
+        // 忽略关闭错误
       }
     }
   });
 
-  it("应该使用 RabbitMQ 适配器添加和获取任务", async () => {
-    const isRunning = await checkDockerContainer("rabbitmq");
-    if (!isRunning) {
-      console.log("⚠️  跳过：RabbitMQ 容器未运行");
+  beforeEach(async () => {
+    // RabbitMQ 不需要清理数据，因为每个测试使用不同的队列名称
+  });
+
+  it("应该检查 RabbitMQ 连接", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
       return;
     }
 
-    let adapter: any = null;
+    expect(adapter).toBeTruthy();
+  }, { sanitizeOps: false, sanitizeResources: false });
+
+  it("应该创建 RabbitMQ 队列适配器", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
+      return;
+    }
+
+    expect(adapter).toBeTruthy();
+  }, { sanitizeOps: false, sanitizeResources: false });
+
+  it("应该使用 RabbitMQ 适配器添加和获取任务", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
+      return;
+    }
+
+    const queueManager = new QueueManager({ adapter, autoRecover: false });
+    const queue = queueManager.createQueue("test-rabbitmq", {
+      concurrency: 1,
+    });
+
     try {
-      const { RabbitMQQueueAdapter } = await import(
-        "../src/adapters/rabbitmq.ts"
-      );
-      adapter = new RabbitMQQueueAdapter({
-        connection: {
-          url: "amqp://guest:guest@127.0.0.1:5672",
-        },
-        queueOptions: { durable: true },
-      });
-      await adapter.connect();
-
-      const queueManager = new QueueManager({ adapter, autoRecover: false });
-      const queue = queueManager.createQueue("test-rabbitmq", {
-        concurrency: 1,
-      });
-
       const job = await queue.add("test-job", { data: "test" });
 
       // 等待任务添加
@@ -105,7 +139,7 @@ describe("Queue > RabbitMQQueueAdapter", () => {
       }
       // 验证任务内容
       expect(retrievedJob.name).toBe("test-job");
-
+    } finally {
       // 清理：先停止队列，再关闭适配器
       queue.stop(); // 先停止队列处理循环
       // 在 Deno 环境下，等待队列中的所有定时器完成
@@ -114,58 +148,29 @@ describe("Queue > RabbitMQQueueAdapter", () => {
       }
       await queueManager.close();
       // 等待处理循环完全停止（RabbitMQ 可能需要更长时间）
-      // 在 Deno 环境下，需要等待更长时间以确保所有定时器完成
       await new Promise((resolve) =>
         setTimeout(resolve, IS_DENO ? 2000 : 1000)
       );
-      await adapter.disconnect();
-      // 等待连接完全关闭和所有定时器完成
-      // 在 Deno 环境下，需要等待更长时间以确保所有定时器完成
-      await new Promise((resolve) => setTimeout(resolve, IS_DENO ? 800 : 300));
-    } catch (error) {
-      console.log(
-        `⚠️  跳过：RabbitMQ 测试失败 - ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-      if (adapter?.disconnect) {
-        await adapter.disconnect();
-      }
     }
-  });
+  }, { sanitizeOps: false, sanitizeResources: false });
 
   it("应该使用 RabbitMQ 适配器处理任务", async () => {
-    const isRunning = await checkDockerContainer("rabbitmq");
-    if (!isRunning) {
-      console.log("⚠️  跳过：RabbitMQ 容器未运行");
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
       return;
     }
 
-    let adapter: any = null;
-    let queueManager: any = null;
-    let queue: any = null;
+    const queueManager = new QueueManager({
+      adapter,
+      autoRecover: false,
+    });
+    const queue = queueManager.createQueue("test-rabbitmq-process", {
+      concurrency: 1,
+    });
+
     try {
-      const { RabbitMQQueueAdapter } = await import(
-        "../src/adapters/rabbitmq.ts"
-      );
-      adapter = new RabbitMQQueueAdapter({
-        connection: {
-          url: "amqp://guest:guest@127.0.0.1:5672",
-        },
-        queueOptions: { durable: true },
-      });
-      await adapter.connect();
-
-      queueManager = new QueueManager({
-        adapter,
-        autoRecover: false,
-      });
-      queue = queueManager.createQueue("test-rabbitmq-process", {
-        concurrency: 1,
-      });
-
       let processed = false;
-      queue.process(async (job: any) => {
+      queue.process(async (job: Job) => {
         expect(job.name).toBe("test-job");
         expect(job.data.data).toBe("test");
         processed = true;
@@ -204,38 +209,18 @@ describe("Queue > RabbitMQQueueAdapter", () => {
         );
       }
       expect(processed).toBeTruthy();
-    } catch (error) {
-      console.log(
-        `⚠️  跳过：RabbitMQ 测试失败 - ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-      throw error; // 重新抛出错误，让测试框架知道测试失败
     } finally {
       // 确保总是清理资源
-      if (queue) {
-        queue.stop(); // 先停止队列处理循环
-        // 在 Deno 环境下，等待队列中的所有定时器完成
-        if (IS_DENO && typeof queue.waitForTimers === "function") {
-          await queue.waitForTimers();
-        }
+      queue.stop(); // 先停止队列处理循环
+      // 在 Deno 环境下，等待队列中的所有定时器完成
+      if (IS_DENO && typeof queue.waitForTimers === "function") {
+        await queue.waitForTimers();
       }
-      if (queueManager) {
-        await queueManager.close();
-        // 等待处理循环完全停止（RabbitMQ 可能需要更长时间）
-        // 在 Deno 环境下，需要等待更长时间以确保所有定时器完成
-        await new Promise((resolve) =>
-          setTimeout(resolve, IS_DENO ? 2000 : 1000)
-        );
-      }
-      if (adapter) {
-        await adapter.disconnect();
-        // 等待连接完全关闭和所有定时器完成
-        // 在 Deno 环境下，需要等待更长时间以确保所有定时器完成
-        await new Promise((resolve) =>
-          setTimeout(resolve, IS_DENO ? 800 : 300)
-        );
-      }
+      await queueManager.close();
+      // 等待处理循环完全停止（RabbitMQ 可能需要更长时间）
+      await new Promise((resolve) =>
+        setTimeout(resolve, IS_DENO ? 2000 : 1000)
+      );
     }
   }, {
     // 禁用定时器和资源检查（RabbitMQ 客户端库可能有内部定时器）
