@@ -368,18 +368,18 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
    */
   /**
    * 从任务 ID 提取队列名称
-   * 任务 ID 格式：${queueName}-${timestamp}-${random}
-   * 例如：test-rabbitmq-process-1234567890-abc123
+   * 任务 ID 格式：${queueName}.${timestamp}.${random}
+   * 例如：test-rabbitmq-process.1234567890.abc123
    */
   private getQueueName(jobId: string): string {
-    // 任务 ID 格式：queueName-timestamp-random
-    // 需要提取第一个部分（队列名称可能包含连字符）
-    // 实际上，任务 ID 的格式是：${this.name}-${Date.now()}-${random}
+    // 任务 ID 格式：queueName.timestamp.random
+    // 需要提取第一个部分（队列名称可能包含点号）
+    // 实际上，任务 ID 的格式是：${this.name}.${Date.now()}.${random}
     // 所以队列名称是除了最后两个部分（timestamp 和 random）之外的所有部分
-    const parts = jobId.split("-");
+    const parts = jobId.split(".");
     if (parts.length >= 3) {
       // 队列名称是除了最后两个部分之外的所有部分
-      return parts.slice(0, -2).join("-");
+      return parts.slice(0, -2).join(".");
     }
     // 如果格式不符合预期，返回第一个部分作为后备
     return parts[0] || "default";

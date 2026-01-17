@@ -15,10 +15,11 @@ export * from "./memory.ts";
 // 导出 Redis 适配器
 export * from "./redis.ts";
 
-
 // 导出 RabbitMQ 适配器
 export * from "./rabbitmq.ts";
 
-
 // 导出 MongoDB 适配器
 export * from "./mongodb.ts";
+
+// 导出 Memcached 适配器
+export * from "./memcached.ts";

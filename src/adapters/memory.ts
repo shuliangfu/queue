@@ -25,12 +25,31 @@ export class MemoryQueueAdapter implements QueueAdapter {
     await Promise.resolve();
     this.jobs.set(job.id, job);
     // 从任务 ID 中提取队列名称（格式：queueName-timestamp-random）
-    const queueName = job.id.split("-")[0];
+    // 队列名称可能包含连字符，所以需要取除了最后两个部分（timestamp 和 random）之外的所有部分
+    const queueName = this.getQueueName(job.id);
     if (!this.queues.has(queueName)) {
       this.queues.set(queueName, new Set());
     }
     this.queues.get(queueName)!.add(job.id);
     this.jobToQueue.set(job.id, queueName);
+  }
+
+  /**
+   * 从任务 ID 提取队列名称
+   * 任务 ID 格式：${queueName}.${timestamp}.${random}
+   * 例如：test-queue.1234567890.abc123
+   *
+   * 注意：队列名称可能包含点号，所以不能简单地使用 split(".")[0]
+   * 正确的方法是：取除了最后两个部分（timestamp 和 random）之外的所有部分
+   */
+  private getQueueName(jobId: string): string {
+    const parts = jobId.split(".");
+    if (parts.length >= 3) {
+      // 队列名称是除了最后两个部分之外的所有部分
+      return parts.slice(0, -2).join(".");
+    }
+    // 如果格式不符合预期，返回第一个部分作为后备
+    return parts[0] || "default";
   }
 
   async getNext(queueName: string): Promise<Job | null> {

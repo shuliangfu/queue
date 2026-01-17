@@ -227,4 +227,224 @@ describe("Queue > RabbitMQQueueAdapter", () => {
     sanitizeOps: false,
     sanitizeResources: false,
   });
+
+  it("应该使用 RabbitMQ 适配器更新任务状态", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
+      return;
+    }
+
+    const queueManager = new QueueManager({ adapter, autoRecover: false });
+    const queue = queueManager.createQueue("test-rabbitmq-update", {
+      concurrency: 1,
+    });
+
+    try {
+      const job = await queue.add("test-job", { data: "test" });
+
+      // 等待任务添加
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 更新任务状态
+      await adapter.update(job.id, {
+        status: "processing",
+        startedAt: Date.now(),
+      });
+
+      // 验证任务状态已更新
+      const updatedJob = await adapter.get(job.id);
+      expect(updatedJob?.status).toBe("processing");
+      expect(updatedJob?.startedAt).toBeTruthy();
+    } finally {
+      queue.stop();
+      if (IS_DENO && typeof (queue as any).waitForTimers === "function") {
+        await (queue as any).waitForTimers();
+      }
+      await queueManager.close();
+      await new Promise((resolve) =>
+        setTimeout(resolve, IS_DENO ? 2000 : 1000)
+      );
+    }
+  }, { sanitizeOps: false, sanitizeResources: false });
+
+  it("应该使用 RabbitMQ 适配器删除任务", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
+      return;
+    }
+
+    const queueManager = new QueueManager({ adapter, autoRecover: false });
+    const queue = queueManager.createQueue("test-rabbitmq-remove", {
+      concurrency: 1,
+    });
+
+    try {
+      const job = await queue.add("test-job", { data: "test" });
+
+      // 等待任务添加
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 验证任务存在
+      const jobBefore = await adapter.get(job.id);
+      expect(jobBefore).toBeTruthy();
+
+      // 删除任务
+      await adapter.remove(job.id);
+
+      // 验证任务已删除
+      const jobAfter = await adapter.get(job.id);
+      expect(jobAfter).toBeNull();
+    } finally {
+      queue.stop();
+      if (IS_DENO && typeof (queue as any).waitForTimers === "function") {
+        await (queue as any).waitForTimers();
+      }
+      await queueManager.close();
+      await new Promise((resolve) =>
+        setTimeout(resolve, IS_DENO ? 2000 : 1000)
+      );
+    }
+  }, { sanitizeOps: false, sanitizeResources: false });
+
+  it("应该使用 RabbitMQ 适配器获取所有任务", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
+      return;
+    }
+
+    const queueManager = new QueueManager({ adapter, autoRecover: false });
+    const queue = queueManager.createQueue("test-rabbitmq-getall", {
+      concurrency: 1,
+    });
+
+    try {
+      const job1 = await queue.add("job1", { data: "data1" });
+      const job2 = await queue.add("job2", { data: "data2" });
+      const job3 = await queue.add("job3", { data: "data3" });
+
+      // 等待任务添加
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 获取所有任务
+      const allJobs = await adapter.getAll("test-rabbitmq-getall");
+
+      expect(allJobs.length).toBeGreaterThanOrEqual(3);
+      const jobIds = allJobs.map((j) => j.id);
+      expect(jobIds).toContain(job1.id);
+      expect(jobIds).toContain(job2.id);
+      expect(jobIds).toContain(job3.id);
+    } finally {
+      queue.stop();
+      if (IS_DENO && typeof (queue as any).waitForTimers === "function") {
+        await (queue as any).waitForTimers();
+      }
+      await queueManager.close();
+      await new Promise((resolve) =>
+        setTimeout(resolve, IS_DENO ? 2000 : 1000)
+      );
+    }
+  }, { sanitizeOps: false, sanitizeResources: false });
+
+  it("应该使用 RabbitMQ 适配器清空队列", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
+      return;
+    }
+
+    const queueManager = new QueueManager({ adapter, autoRecover: false });
+    const queue = queueManager.createQueue("test-rabbitmq-clear", {
+      concurrency: 1,
+    });
+
+    try {
+      await queue.add("job1", { data: "data1" });
+      await queue.add("job2", { data: "data2" });
+
+      // 等待任务添加
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 验证任务存在
+      let allJobs = await adapter.getAll("test-rabbitmq-clear");
+      expect(allJobs.length).toBeGreaterThanOrEqual(2);
+
+      // 清空队列
+      await adapter.clear("test-rabbitmq-clear");
+
+      // 验证队列已清空
+      allJobs = await adapter.getAll("test-rabbitmq-clear");
+      expect(allJobs.length).toBe(0);
+    } finally {
+      queue.stop();
+      if (IS_DENO && typeof (queue as any).waitForTimers === "function") {
+        await (queue as any).waitForTimers();
+      }
+      await queueManager.close();
+      await new Promise((resolve) =>
+        setTimeout(resolve, IS_DENO ? 2000 : 1000)
+      );
+    }
+  }, { sanitizeOps: false, sanitizeResources: false });
+
+  it("应该使用 RabbitMQ 适配器获取队列统计信息", async () => {
+    if (!adapter) {
+      console.log("⚠️  RabbitMQ 不可用，跳过测试");
+      return;
+    }
+
+    const queueManager = new QueueManager({ adapter, autoRecover: false });
+    const queue = queueManager.createQueue("test-rabbitmq-stats-full", {
+      concurrency: 1,
+    });
+
+    try {
+      // 添加多个不同状态的任务
+      const job1 = await queue.add("pending-job", { data: "pending" });
+      const job2 = await queue.add("processing-job", { data: "processing" });
+      const job3 = await queue.add("completed-job", { data: "completed" });
+      const job4 = await queue.add("failed-job", { data: "failed" });
+
+      // 等待任务添加
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 更新任务状态
+      await adapter.update(job2.id, {
+        status: "processing",
+        startedAt: Date.now(),
+      });
+      await adapter.update(job3.id, {
+        status: "completed",
+        completedAt: Date.now(),
+      });
+      await adapter.update(job4.id, {
+        status: "failed",
+        failedAt: Date.now(),
+        error: "处理失败",
+      });
+
+      // 等待状态更新
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 获取统计信息
+      const stats = await adapter.getStats("test-rabbitmq-stats-full");
+
+      expect(stats).toBeTruthy();
+      expect(typeof stats.pending).toBe("number");
+      expect(typeof stats.processing).toBe("number");
+      expect(typeof stats.completed).toBe("number");
+      expect(typeof stats.failed).toBe("number");
+      expect(stats.pending).toBeGreaterThanOrEqual(1);
+      expect(stats.processing).toBeGreaterThanOrEqual(1);
+      expect(stats.completed).toBeGreaterThanOrEqual(1);
+      expect(stats.failed).toBeGreaterThanOrEqual(1);
+    } finally {
+      queue.stop();
+      if (IS_DENO && typeof (queue as any).waitForTimers === "function") {
+        await (queue as any).waitForTimers();
+      }
+      await queueManager.close();
+      await new Promise((resolve) =>
+        setTimeout(resolve, IS_DENO ? 2000 : 1000)
+      );
+    }
+  }, { sanitizeOps: false, sanitizeResources: false });
 });

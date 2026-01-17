@@ -66,11 +66,21 @@ export interface MongoDBQueueCollection {
   };
   /** 更新一个文档 */
   updateOne(filter: any, update: any): Promise<{ modifiedCount: number }>;
+  /** 查找并更新一个文档（原子操作） */
+  findOneAndUpdate(
+    filter: any,
+    update: any,
+    options?: { returnDocument?: "before" | "after" },
+  ): Promise<any | null>;
   /** 更新多个文档 */
   updateMany(
     filter: any,
     update: any,
   ): Promise<{ modifiedCount: number }>;
+  /** 聚合管道 */
+  aggregate(pipeline: any[]): {
+    toArray(): Promise<any[]>;
+  };
   /** 删除一个文档 */
   deleteOne(filter: any): Promise<{ deletedCount: number }>;
   /** 删除多个文档 */
@@ -263,22 +273,21 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   /**
    * 从任务 ID 提取队列名称
-   * 任务 ID 格式：${queueName}-${timestamp}-${random}
-   * 例如：test-mongodb-process-1234567890-abc123
+   * 任务 ID 格式：${queueName}.${timestamp}.${random}
+   * 例如：test-mongodb-process.1234567890.abc123
    */
   private getQueueName(jobId: string): string {
-    // 任务 ID 格式：queueName-timestamp-random
-    // 需要提取第一个部分（队列名称可能包含连字符）
-    // 但队列名称通常是最后一个包含连字符的部分，或者是第一个部分
-    // 实际上，任务 ID 的格式是：${this.name}-${Date.now()}-${random}
-    // 所以队列名称就是第一个连字符之前的部分
-    const parts = jobId.split("-");
-    // 如果队列名称本身包含连字符（如 "test-mongodb-process"），
-    // 我们需要找到最后两个连字符之间的部分
+    // 任务 ID 格式：queueName.timestamp.random
+    // 需要提取第一个部分（队列名称可能包含点号）
+    // 实际上，任务 ID 的格式是：${this.name}.${Date.now()}.${random}
+    // 所以队列名称是除了最后两个部分（timestamp 和 random）之外的所有部分
+    const parts = jobId.split(".");
+    // 如果队列名称本身包含点号（如 "test.mongodb.process"），
+    // 我们需要找到最后两个点号之间的部分
     // 但更简单的方法是：队列名称是除了最后两个部分（timestamp 和 random）之外的所有部分
     if (parts.length >= 3) {
       // 队列名称是除了最后两个部分之外的所有部分
-      return parts.slice(0, -2).join("-");
+      return parts.slice(0, -2).join(".");
     }
     // 如果格式不符合预期，返回第一个部分作为后备
     return parts[0] || "default";
@@ -313,9 +322,15 @@ export class MongoDBQueueAdapter implements QueueAdapter {
     const collection = this.getCollection();
     try {
       // 创建复合索引：queueName + status + priority + createdAt（用于 getNext 查询）
+      // 注意：priority 字段在聚合管道中转换为 priorityValue 进行排序，但索引仍然有助于过滤
       await collection.createIndex(
         { queueName: 1, status: 1, priority: -1, createdAt: 1 },
         { name: "queueName_status_priority_created" },
+      );
+      // 创建复合索引：queueName + status + createdAt（用于延迟任务过滤）
+      await collection.createIndex(
+        { queueName: 1, status: 1, createdAt: 1 },
+        { name: "queueName_status_created" },
       );
       // 创建 ID 索引（用于 get 查询）
       await collection.createIndex(
@@ -358,64 +373,105 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
     const now = Date.now();
 
-    // 查找下一个可执行的任务（考虑延迟和优先级）
-    // 查询条件：queueName 匹配 + status = "pending" 且 (delay 不存在 或 createdAt + delay <= now)
-    const query: any = {
-      queueName,
-      status: "pending",
-      $or: [
-        { delay: { $exists: false } },
-        { delay: null },
-        {
-          $expr: {
-            $lte: [{ $add: ["$createdAt", { $ifNull: ["$delay", 0] }] }, now],
-          },
-        },
-      ],
+    // 性能优化：使用聚合管道在数据库层面排序和限制，避免在内存中处理大量数据
+    // 优先级映射：low=1, normal=2, high=3, urgent=4
+    const priorityMap: Record<string, number> = {
+      low: 1,
+      normal: 2,
+      high: 3,
+      urgent: 4,
     };
 
-    // 获取所有符合条件的任务，然后在内存中按优先级排序
-    // 因为 MongoDB 的优先级是字符串，需要转换为数字排序
-    const jobs = await collection.find(query).toArray();
+    // 使用聚合管道查找下一个可执行的任务
+    const pipeline = [
+      // 匹配条件：queueName + status = "pending"
+      {
+        $match: {
+          queueName,
+          status: "pending",
+        },
+      },
+      // 添加计算字段：优先级数值和延迟到期时间
+      {
+        $addFields: {
+          // 将优先级字符串转换为数字
+          priorityValue: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$priority", "low"] }, then: 1 },
+                { case: { $eq: ["$priority", "normal"] }, then: 2 },
+                { case: { $eq: ["$priority", "high"] }, then: 3 },
+                { case: { $eq: ["$priority", "urgent"] }, then: 4 },
+              ],
+              default: 2, // 默认 normal
+            },
+          },
+          // 计算延迟到期时间
+          delayExpiry: {
+            $cond: {
+              if: { $and: [{ $ne: ["$delay", null] }, { $ne: ["$delay", undefined] }] },
+              then: { $add: ["$createdAt", "$delay"] },
+              else: 0, // 无延迟任务，立即可用
+            },
+          },
+        },
+      },
+      // 过滤延迟未到的任务
+      {
+        $match: {
+          $expr: {
+            $or: [
+              { $eq: ["$delayExpiry", 0] }, // 无延迟任务
+              { $lte: ["$delayExpiry", now] }, // 延迟已到期
+            ],
+          },
+        },
+      },
+      // 按优先级（降序）和创建时间（升序）排序
+      {
+        $sort: {
+          priorityValue: -1, // 高优先级优先
+          createdAt: 1, // 相同优先级按创建时间排序
+        },
+      },
+      // 只取第一个任务
+      {
+        $limit: 1,
+      },
+    ];
 
-    if (jobs.length === 0) {
+    // 执行聚合管道
+    const results = await collection.aggregate(pipeline).toArray();
+
+    if (results.length === 0) {
       return null;
     }
 
-    // 过滤掉延迟未到的任务
-    const availableJobs = (jobs as Job[]).filter((job) => {
-      if (!job.delay) return true;
-      return job.createdAt + job.delay <= now;
-    });
+    const nextJob = results[0] as any;
 
-    if (availableJobs.length === 0) {
-      return null;
-    }
+    // 移除聚合管道添加的临时字段
+    delete nextJob.priorityValue;
+    delete nextJob.delayExpiry;
 
-    // 按优先级和创建时间排序
-    availableJobs.sort((a, b) => {
-      const priorityDiff = this.comparePriority(b.priority, a.priority);
-      if (priorityDiff !== 0) return priorityDiff;
-      return a.createdAt - b.createdAt;
-    });
-
-    const nextJob = availableJobs[0];
-
-    // 更新任务状态为 processing
-    nextJob.status = "processing";
-    nextJob.startedAt = now;
-    await collection.updateOne(
-      { id: nextJob.id, queueName },
+    // 更新任务状态为 processing（使用 findOneAndUpdate 原子操作）
+    const updatedJob = await collection.findOneAndUpdate(
+      { id: nextJob.id, queueName, status: "pending" }, // 确保状态仍然是 pending（防止并发）
       {
         $set: {
           status: "processing",
           startedAt: now,
         },
       },
+      { returnDocument: "after" }, // 返回更新后的文档
     );
 
+    // 如果更新失败（可能被其他进程获取），返回 null
+    if (!updatedJob) {
+      return null;
+    }
+
     // 返回时移除 queueName 字段（如果不需要的话，也可以保留）
-    const { queueName: _, ...jobWithoutQueueName } = nextJob as any;
+    const { queueName: _, ...jobWithoutQueueName } = updatedJob as any;
     return jobWithoutQueueName as Job;
   }
 

@@ -62,6 +62,8 @@ export interface RedisQueueClient {
     count: number,
     value: string,
   ): Promise<number> | number;
+  /** 批量获取值（MGET 命令） */
+  mGet?(keys: string[]): Promise<(string | null)[]>;
   /** 断开连接 */
   disconnect?: () => Promise<void> | void;
   /** 退出连接 */
@@ -180,6 +182,7 @@ export class RedisQueueAdapter implements QueueAdapter {
           llen: (key: string) => this.internalClient.lLen(key),
           lrem: (key: string, count: number, value: string) =>
             this.internalClient.lRem(key, count, value),
+          mGet: (keys: string[]) => this.internalClient.mGet(keys),
         };
       } catch (error) {
         throw new Error(
@@ -247,18 +250,18 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   /**
    * 从任务 ID 提取队列名称
-   * 任务 ID 格式：${queueName}-${timestamp}-${random}
-   * 例如：test-redis-process-1234567890-abc123
+   * 任务 ID 格式：${queueName}.${timestamp}.${random}
+   * 例如：test-redis-process.1234567890.abc123
    */
   private getQueueName(jobId: string): string {
-    // 任务 ID 格式：queueName-timestamp-random
-    // 需要提取第一个部分（队列名称可能包含连字符）
-    // 实际上，任务 ID 的格式是：${this.name}-${Date.now()}-${random}
+    // 任务 ID 格式：queueName.timestamp.random
+    // 需要提取第一个部分（队列名称可能包含点号）
+    // 实际上，任务 ID 的格式是：${this.name}.${Date.now()}.${random}
     // 所以队列名称是除了最后两个部分（timestamp 和 random）之外的所有部分
-    const parts = jobId.split("-");
+    const parts = jobId.split(".");
     if (parts.length >= 3) {
       // 队列名称是除了最后两个部分之外的所有部分
-      return parts.slice(0, -2).join("-");
+      return parts.slice(0, -2).join(".");
     }
     // 如果格式不符合预期，返回第一个部分作为后备
     return parts[0] || "default";
@@ -304,32 +307,69 @@ export class RedisQueueAdapter implements QueueAdapter {
 
     // 获取所有任务 ID
     const jobIds = await this.client.lrange(queueKey, 0, -1);
+    if (jobIds.length === 0) {
+      return null;
+    }
+
     const now = Date.now();
     let nextJob: Job | null = null;
     let nextJobId: string | null = null;
 
-    // 查找下一个可执行的任务（考虑延迟和优先级）
-    for (const jobId of jobIds) {
-      const jobKey = this.getJobKey(jobId);
-      const jobData = await this.client.get(jobKey);
-      if (!jobData) continue;
+    // 性能优化：使用 MGET 批量获取任务数据，减少网络往返
+    if (this.client.mGet && jobIds.length > 1) {
+      // 构建所有任务键名
+      const jobKeys = jobIds.map((jobId) => this.getJobKey(jobId));
 
-      const job = JSON.parse(jobData) as Job;
-      if (job.status !== "pending") {
-        continue;
+      // 批量获取所有任务数据
+      const jobDataArray = await this.client.mGet(jobKeys);
+
+      // 解析并查找下一个可执行的任务（考虑延迟和优先级）
+      for (let i = 0; i < jobDataArray.length; i++) {
+        const jobData = jobDataArray[i];
+        if (!jobData) continue;
+
+        const job = JSON.parse(jobData) as Job;
+        if (job.status !== "pending") {
+          continue;
+        }
+
+        // 检查延迟
+        if (job.delay && job.createdAt + job.delay > now) {
+          continue;
+        }
+
+        // 选择优先级最高的任务
+        if (
+          !nextJob || this.comparePriority(job.priority, nextJob.priority) > 0
+        ) {
+          nextJob = job;
+          nextJobId = jobIds[i];
+        }
       }
+    } else {
+      // 回退到单个获取（兼容不支持 MGET 的客户端或单个任务的情况）
+      for (const jobId of jobIds) {
+        const jobKey = this.getJobKey(jobId);
+        const jobData = await this.client.get(jobKey);
+        if (!jobData) continue;
 
-      // 检查延迟
-      if (job.delay && job.createdAt + job.delay > now) {
-        continue;
-      }
+        const job = JSON.parse(jobData) as Job;
+        if (job.status !== "pending") {
+          continue;
+        }
 
-      // 选择优先级最高的任务
-      if (
-        !nextJob || this.comparePriority(job.priority, nextJob.priority) > 0
-      ) {
-        nextJob = job;
-        nextJobId = jobId;
+        // 检查延迟
+        if (job.delay && job.createdAt + job.delay > now) {
+          continue;
+        }
+
+        // 选择优先级最高的任务
+        if (
+          !nextJob || this.comparePriority(job.priority, nextJob.priority) > 0
+        ) {
+          nextJob = job;
+          nextJobId = jobId;
+        }
       }
     }
 
@@ -341,21 +381,21 @@ export class RedisQueueAdapter implements QueueAdapter {
       await this.client.set(jobKey, JSON.stringify(nextJob));
 
       // 从队列列表中移除该任务 ID（使用 LREM）
-      const queueKey = this.getQueueKey(queueName);
+      const queueKeyForRemove = this.getQueueKey(queueName);
       if (this.client.lrem) {
         // 使用 LREM 移除一个匹配的元素（count=1 表示只移除第一个匹配的）
-        await this.client.lrem(queueKey, 1, nextJobId);
+        await this.client.lrem(queueKeyForRemove, 1, nextJobId);
       } else {
         // 如果客户端不支持 LREM，使用 lrange + lpush 的方式重建列表
         // 注意：这不是原子操作，但在大多数情况下可以工作
-        const allJobIds = await this.client.lrange(queueKey, 0, -1);
+        const allJobIds = await this.client.lrange(queueKeyForRemove, 0, -1);
         const filteredJobIds = allJobIds.filter((id) => id !== nextJobId);
 
         // 删除原列表并重建
-        await this.client.del(queueKey);
+        await this.client.del(queueKeyForRemove);
         if (filteredJobIds.length > 0) {
           for (const id of filteredJobIds.reverse()) {
-            await this.client.lpush(queueKey, id);
+            await this.client.lpush(queueKeyForRemove, id);
           }
         }
       }
@@ -425,12 +465,40 @@ export class RedisQueueAdapter implements QueueAdapter {
     }
     const queueKey = this.getQueueKey(queueName);
     const jobIds = await this.client.lrange(queueKey, 0, -1);
+
+    if (jobIds.length === 0) {
+      return [];
+    }
+
     const jobs: Job[] = [];
 
-    for (const jobId of jobIds) {
-      const job = await this.get(jobId);
-      if (job) {
-        jobs.push(job);
+    // 性能优化：使用 MGET 批量获取任务数据
+    if (this.client.mGet && jobIds.length > 1) {
+      // 构建所有任务键名
+      const jobKeys = jobIds.map((jobId) => this.getJobKey(jobId));
+
+      // 批量获取所有任务数据
+      const jobDataArray = await this.client.mGet(jobKeys);
+
+      // 解析任务数据
+      for (let i = 0; i < jobDataArray.length; i++) {
+        const jobData = jobDataArray[i];
+        if (jobData) {
+          try {
+            const job = JSON.parse(jobData) as Job;
+            jobs.push(job);
+          } catch {
+            // 忽略解析错误的任务
+          }
+        }
+      }
+    } else {
+      // 回退到单个获取（兼容不支持 MGET 的客户端或单个任务的情况）
+      for (const jobId of jobIds) {
+        const job = await this.get(jobId);
+        if (job) {
+          jobs.push(job);
+        }
       }
     }
 

@@ -20,6 +20,7 @@ import type {
 // 导入 runtime-adapter 的 cron API
 import { cron, type CronHandle, IS_DENO } from "@dreamer/runtime-adapter";
 // 导入类型供当前文件使用
+import type { MemcachedConnectionConfig } from "./adapters/memcached.ts";
 import type { MongoDBConnectionConfig } from "./adapters/mongodb.ts";
 import type { RabbitMQConnectionConfig } from "./adapters/rabbitmq.ts";
 import type { RedisConnectionConfig } from "./adapters/redis.ts";
@@ -69,8 +70,8 @@ export interface QueueManagerOptions {
  * 统一的配置接口，支持所有适配器类型
  */
 export interface QueueConfig extends Omit<QueueManagerOptions, "adapter"> {
-  /** 适配器类型（memory、redis、mongodb、rabbitmq） */
-  adapter?: "memory" | "redis" | "mongodb" | "rabbitmq";
+  /** 适配器类型（memory、redis、mongodb、rabbitmq、memcached） */
+  adapter?: "memory" | "redis" | "mongodb" | "rabbitmq" | "memcached";
   /** Redis 连接配置（仅 redis 适配器） */
   connection?: RedisConnectionConfig;
   /** Redis 客户端实例（仅 redis 适配器，如果提供 connection，则不需要提供 client） */
@@ -90,6 +91,10 @@ export interface QueueConfig extends Omit<QueueManagerOptions, "adapter"> {
     /** 是否持久化 */
     durable?: boolean;
   };
+  /** Memcached 连接配置（仅 memcached 适配器） */
+  memcachedConnection?: MemcachedConnectionConfig;
+  /** Memcached 客户端实例（仅 memcached 适配器，如果提供 memcachedConnection，则不需要提供 memcachedClient） */
+  memcachedClient?: unknown;
 }
 
 /**
@@ -143,6 +148,8 @@ export class Queue {
   private processing: Set<string> = new Set();
   private intervalId?: number;
   private pendingTimeouts: Set<number> = new Set(); // 跟踪所有待处理的定时器
+  private lastJobFound: boolean = false; // 记录上次是否找到任务，用于动态延迟
+  private consecutiveEmptyPolls: number = 0; // 连续空轮询次数
 
   constructor(name: string, adapter: QueueAdapter, options: QueueOptions) {
     this.name = name;
@@ -161,7 +168,7 @@ export class Queue {
     options: AddJobOptions = {},
   ): Promise<Job> {
     const job: Job = {
-      id: `${this.name}-${Date.now()}-${
+      id: `${this.name}.${Date.now()}.${
         Math.random().toString(36).substring(7)
       }`,
       name,
@@ -201,7 +208,41 @@ export class Queue {
   }
 
   /**
+   * 获取动态延迟时间（毫秒）
+   * 根据队列状态和连续空轮询次数调整延迟
+   * - 有任务时：0-10ms 快速轮询
+   * - 无任务时：根据连续空轮询次数递增延迟（100ms → 500ms → 1000ms）
+   */
+  private getDynamicDelay(): number {
+    // 如果正在处理任务，使用短延迟
+    if (this.processing.size > 0) {
+      return 0; // 立即继续处理
+    }
+
+    // 如果上次找到任务，使用短延迟
+    if (this.lastJobFound) {
+      this.consecutiveEmptyPolls = 0; // 重置连续空轮询计数
+      return 10; // 10ms 快速轮询
+    }
+
+    // 如果上次没找到任务，根据连续空轮询次数递增延迟
+    this.consecutiveEmptyPolls++;
+
+    // 动态延迟：100ms → 200ms → 500ms → 1000ms（最大 1000ms）
+    if (this.consecutiveEmptyPolls <= 1) {
+      return 100; // 第一次空轮询，100ms
+    } else if (this.consecutiveEmptyPolls <= 3) {
+      return 200; // 2-3 次空轮询，200ms
+    } else if (this.consecutiveEmptyPolls <= 5) {
+      return 500; // 4-5 次空轮询，500ms
+    } else {
+      return 1000; // 5 次以上空轮询，1000ms（最大延迟）
+    }
+  }
+
+  /**
    * 处理循环
+   * 使用动态延迟优化性能：有任务时快速轮询，无任务时慢速轮询
    */
   private async processLoop(): Promise<void> {
     while (this.running) {
@@ -209,11 +250,12 @@ export class Queue {
         // 检查并发限制
         if (this.processing.size >= this.concurrency) {
           if (!this.running) break;
+          // 并发达到上限时，使用短延迟等待
           await new Promise((resolve) => {
             const id = setTimeout(() => {
               this.pendingTimeouts.delete(id as unknown as number);
               resolve(undefined);
-            }, 100) as unknown as number;
+            }, 50) as unknown as number; // 并发满时使用 50ms 延迟
             this.pendingTimeouts.add(id);
           });
           if (!this.running) break;
@@ -248,31 +290,41 @@ export class Queue {
             );
           }
           if (!this.running) break;
+          // 错误时使用动态延迟
+          const delay = this.getDynamicDelay();
           await new Promise((resolve) => {
             const id = setTimeout(() => {
               this.pendingTimeouts.delete(id as unknown as number);
               resolve(undefined);
-            }, 100) as unknown as number;
+            }, delay) as unknown as number;
             this.pendingTimeouts.add(id);
           });
           if (!this.running) break;
+          this.lastJobFound = false; // 错误时标记为未找到任务
           continue;
         }
 
         if (!this.running) break;
 
         if (!job) {
+          // 未找到任务，使用动态延迟
+          this.lastJobFound = false;
+          const delay = this.getDynamicDelay();
           if (!this.running) break;
           await new Promise((resolve) => {
             const id = setTimeout(() => {
               this.pendingTimeouts.delete(id as unknown as number);
               resolve(undefined);
-            }, 100) as unknown as number;
+            }, delay) as unknown as number;
             this.pendingTimeouts.add(id);
           });
           if (!this.running) break;
           continue;
         }
+
+        // 找到任务，标记并处理
+        this.lastJobFound = true;
+        this.consecutiveEmptyPolls = 0; // 重置连续空轮询计数
 
         // 处理任务
         this.processJob(job).catch((error) => {
@@ -289,14 +341,17 @@ export class Queue {
           }`,
         );
         if (!this.running) break;
+        // 错误时使用动态延迟
+        const delay = this.getDynamicDelay();
         await new Promise((resolve) => {
           const id = setTimeout(() => {
             this.pendingTimeouts.delete(id as unknown as number);
             resolve(undefined);
-          }, 100) as unknown as number;
+          }, delay) as unknown as number;
           this.pendingTimeouts.add(id);
         });
         if (!this.running) break;
+        this.lastJobFound = false; // 错误时标记为未找到任务
       }
     }
   }
@@ -331,6 +386,20 @@ export class Queue {
       if (timeoutId) {
         clearTimeout(timeoutId);
         this.pendingTimeouts.delete(timeoutId);
+      }
+
+      // 检查任务是否还在处理中（可能已被超时处理）
+      // 如果任务不在 processing 集合中，说明已经被超时处理，不应该标记为完成
+      if (!this.processing.has(job.id)) {
+        // 任务已被超时处理，不更新状态
+        return;
+      }
+
+      // 再次检查任务当前状态，避免覆盖已失败的状态
+      const currentJob = await this.adapter.get(job.id);
+      if (currentJob && currentJob.status === "failed") {
+        // 任务已被标记为失败（可能是超时），不更新状态
+        return;
       }
 
       // 标记为完成
@@ -641,9 +710,21 @@ export class QueueManager {
   private removeCronTask(name: string): void {
     const task = this.cronTasks.get(name);
     if (task) {
-      // 使用 runtime-adapter 的 CronHandle 关闭任务
-      task.handle.close();
-      task.signal.abort();
+      try {
+        // 使用 runtime-adapter 的 CronHandle 关闭任务
+        // CronHandle 接口定义了 close() 方法
+        if (task.handle && typeof task.handle.close === "function") {
+          task.handle.close();
+        }
+        // 取消 AbortController（如果尚未取消）
+        // AbortController.abort() 可以安全地多次调用
+        if (task.signal && !task.signal.signal.aborted) {
+          task.signal.abort();
+        }
+      } catch (error) {
+        // 忽略关闭错误，确保任务被移除
+        console.warn(`关闭定时任务失败: ${name}`, error);
+      }
       this.cronTasks.delete(name);
     }
   }

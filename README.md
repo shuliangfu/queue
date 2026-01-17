@@ -41,6 +41,7 @@
   - 一个任务类型的阻塞不会影响其他任务类型
 - **持久化支持**（推荐使用）：
   - **Redis 适配器**：基于 Redis 的持久化存储（推荐，高性能）
+  - **Memcached 适配器**：基于 Memcached 的内存缓存存储（高性能，只要服务不重启数据不丢失）
   - **RabbitMQ 适配器**：基于 RabbitMQ 的持久化存储（企业级，支持高级特性）
   - **MongoDB 适配器**：基于 MongoDB 的持久化存储（文档数据库，适合复杂查询）
   - **内存适配器**：仅用于开发和测试，不支持持久化
@@ -68,6 +69,7 @@ deno add jsr:@dreamer/queue
 - **客户端**：❌ 不支持（浏览器环境无法运行任务队列）
 - **依赖**：根据使用的适配器需要相应的客户端库
   - **Redis 适配器**：需要 Redis 客户端库（如 `npm:redis` 或 `npm:ioredis`）
+  - **Memcached 适配器**：需要 Memcached 客户端库（如 `npm:memcache-client`）
   - **RabbitMQ 适配器**：需要 RabbitMQ 客户端库（如 `npm:amqplib`）
   - **MongoDB 适配器**：需要 MongoDB 客户端库（如 `npm:mongodb`）
   - **内存适配器**：无需额外依赖，但仅用于开发和测试
@@ -77,7 +79,7 @@ deno add jsr:@dreamer/queue
 
 ### 创建队列管理器
 
-**⚠️ 重要**：生产环境必须使用持久化适配器（Redis、RabbitMQ 或 MongoDB）。内存适配器仅用于开发和测试。
+**⚠️ 重要**：生产环境必须使用持久化适配器（Redis、Memcached、RabbitMQ 或 MongoDB）。内存适配器仅用于开发和测试。
 
 #### 使用 Redis 适配器（推荐）
 
@@ -192,6 +194,59 @@ const queueManager = new QueueManager({
   recoverTimeout: 30000,
 });
 ```
+
+#### 使用 Memcached 适配器
+
+**方式1：使用连接配置（推荐）**
+
+```typescript
+import { QueueManager, MemcachedQueueAdapter } from "jsr:@dreamer/queue";
+
+const adapter = new MemcachedQueueAdapter({
+  connection: {
+    host: "127.0.0.1",
+    port: 11211,
+    timeout: 5000,
+    compress: false,
+    maxConnections: 10,
+  },
+});
+
+await adapter.connect();
+
+// 创建队列管理器（使用 Memcached 持久化）
+const queueManager = new QueueManager({
+  adapter,
+  autoRecover: true,
+  recoverTimeout: 30000,
+});
+```
+
+**方式2：使用已创建的客户端**
+
+```typescript
+import { QueueManager, MemcachedQueueAdapter } from "jsr:@dreamer/queue";
+import { MemcacheClient } from "npm:memcache-client";
+
+// 创建 Memcached 客户端
+const memcachedClient = new MemcacheClient({
+  server: "127.0.0.1:11211",
+});
+
+// 创建队列管理器（使用 Memcached 持久化）
+const queueManager = new QueueManager({
+  adapter: new MemcachedQueueAdapter({ client: memcachedClient }),
+  autoRecover: true,
+  recoverTimeout: 30000,
+});
+```
+
+**Memcached 适配器说明**：
+- Memcached 是内存缓存系统，数据存储在内存中
+- 只要 Memcached 服务不重启，数据不会丢失
+- 但服务重启后数据会丢失，如果需要真正的持久化（服务重启后数据不丢失），请使用 Redis 或 MongoDB 适配器
+- Memcached 适配器性能高，适合单机或小规模分布式场景
+- 支持批量获取优化（getMulti），提高性能
 
 #### 使用 MongoDB 适配器
 
@@ -814,11 +869,12 @@ await queueManager.close();
 
 ## 注意事项
 
-- **持久化适配器**：**必须提供适配器实例**（Redis、RabbitMQ 或 MongoDB）
-  - 队列库已内置 `RedisQueueAdapter`、`RabbitMQQueueAdapter` 和 `MongoDBQueueAdapter`
+- **持久化适配器**：**必须提供适配器实例**（Redis、Memcached、RabbitMQ 或 MongoDB）
+  - 队列库已内置 `RedisQueueAdapter`、`MemcachedQueueAdapter`、`RabbitMQQueueAdapter` 和 `MongoDBQueueAdapter`
   - 创建 `QueueManager` 时必须提供适配器实例（不支持默认适配器）
-  - 推荐使用持久化适配器（Redis、RabbitMQ、MongoDB），应用重启后任务会自动恢复
+  - 推荐使用持久化适配器（Redis、Memcached、RabbitMQ、MongoDB），应用重启后任务会自动恢复
   - 内存适配器（`MemoryQueueAdapter`）仅用于开发和测试，不支持持久化
+  - ⚠️ **Memcached 适配器注意**：Memcached 是内存缓存系统，只要服务不重启数据不会丢失，但服务重启后数据会丢失。如果需要真正的持久化（服务重启后数据不丢失），请使用 Redis 或 MongoDB 适配器
 - **并发控制**：每个队列独立的并发控制，互不影响
 - **任务重试**：任务失败后会自动重试，直到达到最大重试次数
 - **任务超时**：任务执行超时后会被标记为失败
