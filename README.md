@@ -1,6 +1,7 @@
 # @dreamer/queue
 
-> 一个兼容 Deno 和 Bun 的队列和任务调度库，提供任务队列、任务调度、并发控制等功能
+> 一个兼容 Deno 和 Bun
+> 的队列和任务调度库，提供任务队列、任务调度、并发控制等功能
 
 [![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
@@ -24,12 +25,12 @@ deno add jsr:@dreamer/queue
 
 ## 🌍 环境兼容性
 
-| 环境       | 支持情况 | 说明                              |
-| ---------- | -------- | --------------------------------- |
-| Deno       | ✅       | Deno 2.6+                         |
-| Bun        | ✅       | Bun 1.3.5+                        |
-| 服务端     | ✅       | 兼容 Deno 和 Bun 运行时           |
-| 客户端     | ❌       | 浏览器环境无法运行任务队列        |
+| 环境   | 支持情况 | 说明                       |
+| ------ | -------- | -------------------------- |
+| Deno   | ✅       | Deno 2.6+                  |
+| Bun    | ✅       | Bun 1.3.5+                 |
+| 服务端 | ✅       | 兼容 Deno 和 Bun 运行时    |
+| 客户端 | ❌       | 浏览器环境无法运行任务队列 |
 
 **依赖说明**：
 
@@ -89,7 +90,8 @@ deno add jsr:@dreamer/queue
 
 ### 创建队列管理器
 
-**⚠️ 重要**：生产环境必须使用持久化适配器（Redis、Memcached、RabbitMQ 或 MongoDB）。
+**⚠️ 重要**：生产环境必须使用持久化适配器（Redis、Memcached、RabbitMQ 或
+MongoDB）。
 
 #### 使用 Redis 适配器（推荐）
 
@@ -166,26 +168,26 @@ queueManager.unschedule("daily-report");
 
 创建队列管理器。
 
-| 参数            | 类型           | 默认值  | 说明                         |
-| --------------- | -------------- | ------- | ---------------------------- |
-| adapter         | QueueAdapter   | -       | 队列适配器（必需）           |
-| autoRecover     | boolean        | true    | 是否自动恢复未完成的任务     |
-| recoverTimeout  | number         | 30000   | 恢复超时任务的时间（毫秒）   |
-| name            | string         | default | 管理器名称（用于服务容器）   |
+| 参数           | 类型         | 默认值  | 说明                       |
+| -------------- | ------------ | ------- | -------------------------- |
+| adapter        | QueueAdapter | -       | 队列适配器（必需）         |
+| autoRecover    | boolean      | true    | 是否自动恢复未完成的任务   |
+| recoverTimeout | number       | 30000   | 恢复超时任务的时间（毫秒） |
+| name           | string       | default | 管理器名称（用于服务容器） |
 
 #### 方法
 
-| 方法                                    | 返回值                | 说明                       |
-| --------------------------------------- | --------------------- | -------------------------- |
-| `createQueue(name, options?)`           | Queue                 | 创建队列                   |
-| `getQueue(name)`                        | Queue \| undefined    | 获取队列                   |
-| `schedule(name, cron, handler, opts?)`  | void                  | 添加定时任务               |
-| `unschedule(name)`                      | void                  | 移除定时任务               |
-| `close()`                               | Promise\<void\>       | 关闭管理器                 |
-| `getName()`                             | string                | 获取管理器名称             |
-| `setContainer(container)`               | this                  | 设置服务容器               |
-| `getContainer()`                        | ServiceContainer      | 获取服务容器               |
-| `static fromContainer(container, name)` | QueueManager          | 从容器获取管理器           |
+| 方法                                    | 返回值             | 说明             |
+| --------------------------------------- | ------------------ | ---------------- |
+| `createQueue(name, options?)`           | Queue              | 创建队列         |
+| `getQueue(name)`                        | Queue \| undefined | 获取队列         |
+| `schedule(name, cron, handler, opts?)`  | void               | 添加定时任务     |
+| `unschedule(name)`                      | void               | 移除定时任务     |
+| `close()`                               | Promise\<void\>    | 关闭管理器       |
+| `getName()`                             | string             | 获取管理器名称   |
+| `setContainer(container)`               | this               | 设置服务容器     |
+| `getContainer()`                        | ServiceContainer   | 获取服务容器     |
+| `static fromContainer(container, name)` | QueueManager       | 从容器获取管理器 |
 
 ### Queue
 
@@ -193,25 +195,25 @@ queueManager.unschedule("daily-report");
 
 添加任务到队列。
 
-| 参数        | 类型        | 说明                                     |
-| ----------- | ----------- | ---------------------------------------- |
-| name        | string      | 任务名称                                 |
-| data        | JobData     | 任务数据                                 |
-| priority    | JobPriority | 优先级（low/normal/high/urgent）         |
-| delay       | number      | 延迟执行时间（毫秒）                     |
-| maxAttempts | number      | 最大重试次数                             |
-| timeout     | number      | 超时时间（毫秒）                         |
+| 参数        | 类型        | 说明                             |
+| ----------- | ----------- | -------------------------------- |
+| name        | string      | 任务名称                         |
+| data        | JobData     | 任务数据                         |
+| priority    | JobPriority | 优先级（low/normal/high/urgent） |
+| delay       | number      | 延迟执行时间（毫秒）             |
+| maxAttempts | number      | 最大重试次数                     |
+| timeout     | number      | 超时时间（毫秒）                 |
 
 #### 方法
 
-| 方法                 | 返回值             | 说明             |
-| -------------------- | ------------------ | ---------------- |
-| `process(processor)` | void               | 处理任务         |
-| `getJob(jobId)`      | Promise\<Job\>     | 获取任务         |
-| `getJobs()`          | Promise\<Job[]\>   | 获取所有任务     |
-| `getStats()`         | Promise\<Stats\>   | 获取统计信息     |
-| `clear()`            | Promise\<void\>    | 清空队列         |
-| `stop()`             | void               | 停止处理任务     |
+| 方法                 | 返回值           | 说明         |
+| -------------------- | ---------------- | ------------ |
+| `process(processor)` | void             | 处理任务     |
+| `getJob(jobId)`      | Promise\<Job\>   | 获取任务     |
+| `getJobs()`          | Promise\<Job[]\> | 获取所有任务 |
+| `getStats()`         | Promise\<Stats\> | 获取统计信息 |
+| `clear()`            | Promise\<void\>  | 清空队列     |
+| `stop()`             | void             | 停止处理任务 |
 
 ### createQueueManager 工厂函数
 
@@ -297,13 +299,13 @@ const adapter = new MemcachedQueueAdapter({
 
 定时任务使用 UTC 时区，支持标准的 Cron 表达式：
 
-| 表达式            | 说明             |
-| ----------------- | ---------------- |
-| `* * * * *`       | 每分钟执行       |
-| `0 * * * *`       | 每小时执行       |
-| `0 0 * * *`       | 每天执行         |
-| `*/5 * * * *`     | 每5分钟执行      |
-| `*/30 * * * * *`  | 每30秒执行       |
+| 表达式           | 说明        |
+| ---------------- | ----------- |
+| `* * * * *`      | 每分钟执行  |
+| `0 * * * *`      | 每小时执行  |
+| `0 0 * * *`      | 每天执行    |
+| `*/5 * * * *`    | 每5分钟执行 |
+| `*/30 * * * * *` | 每30秒执行  |
 
 ### 多队列隔离
 
@@ -332,9 +334,11 @@ const adapter = new MemcachedQueueAdapter({
 
 ## 📝 注意事项
 
-- **持久化适配器**：生产环境必须使用持久化适配器（Redis、Memcached、RabbitMQ 或 MongoDB）
+- **持久化适配器**：生产环境必须使用持久化适配器（Redis、Memcached、RabbitMQ 或
+  MongoDB）
 - **内存适配器**：仅用于开发和测试，应用重启后任务会丢失
-- **Memcached 注意**：服务重启后数据会丢失，如需真正持久化请使用 Redis 或 MongoDB
+- **Memcached 注意**：服务重启后数据会丢失，如需真正持久化请使用 Redis 或
+  MongoDB
 - **并发控制**：每个队列独立的并发控制，互不影响
 - **任务重试**：任务失败后会自动重试，直到达到最大重试次数
 - **任务超时**：任务执行超时后会被标记为失败
