@@ -554,8 +554,7 @@
 
 ---
 
-**测试报告生成时间**: 2026-01-30
-**测试框架**: @dreamer/test@^1.0.0-beta.39
-**运行时适配器**: @dreamer/runtime-adapter@^1.0.0-beta.22
-**服务容器**: @dreamer/service@^1.0.0-beta.4
-**测试总数**: 100（+12 ServiceContainer 集成测试）
+**测试报告生成时间**: 2026-01-30 **测试框架**: @dreamer/test@^1.0.0-beta.39
+**运行时适配器**: @dreamer/runtime-adapter@^1.0.0-beta.22 **服务容器**:
+@dreamer/service@^1.0.0-beta.4 **测试总数**: 100（+12 ServiceContainer
+集成测试）
