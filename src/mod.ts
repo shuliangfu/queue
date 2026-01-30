@@ -17,6 +17,9 @@ import type {
   QueueAdapter,
 } from "./adapters/mod.ts";
 
+// 导入服务容器类型（可选依赖）
+import type { ServiceContainer } from "@dreamer/service";
+
 // 导入 runtime-adapter 的 cron API
 import { cron, type CronHandle, IS_DENO } from "@dreamer/runtime-adapter";
 // 导入类型供当前文件使用
@@ -521,22 +524,43 @@ export class Queue {
 }
 
 /**
+ * 队列管理器配置选项（扩展）
+ */
+export interface QueueManagerOptionsExtended extends QueueManagerOptions {
+  /** 管理器名称（用于服务容器注册） */
+  name?: string;
+}
+
+/**
  * 队列管理器
+ * 支持服务容器集成，可通过依赖注入方式管理
  */
 export class QueueManager {
+  /** 队列适配器 */
   private adapter: QueueAdapter;
+  /** 队列映射 */
   private queues: Map<string, Queue> = new Map();
+  /** 是否自动恢复 */
   private autoRecover: boolean;
+  /** 恢复超时时间 */
   private recoverTimeout: number;
+  /** 恢复定时器 ID */
   private recoveryIntervalId?: number;
+  /** 定时任务配置 */
   private scheduledTasks: Map<string, ScheduleOptions> = new Map();
+  /** 定时任务处理器 */
   private scheduledHandlers: Map<string, ScheduledTaskHandler> = new Map();
+  /** Cron 任务映射 */
   private cronTasks: Map<
     string,
     { handle: CronHandle; signal: AbortController }
   > = new Map();
+  /** 服务容器引用 */
+  private container?: ServiceContainer;
+  /** 管理器名称 */
+  private readonly managerName: string;
 
-  constructor(options: QueueManagerOptions) {
+  constructor(options: QueueManagerOptions | QueueManagerOptionsExtended) {
     if (!options.adapter) {
       throw new Error(
         "必须提供队列适配器！请使用 RedisQueueAdapter 或 RabbitMQQueueAdapter 实现持久化。\n" +
@@ -549,11 +573,57 @@ export class QueueManager {
     this.adapter = options.adapter;
     this.autoRecover = options.autoRecover ?? true;
     this.recoverTimeout = options.recoverTimeout || 30000;
+    this.managerName = (options as QueueManagerOptionsExtended).name || "default";
 
     // 启动自动恢复
     if (this.autoRecover) {
       this.startRecovery();
     }
+  }
+
+  /**
+   * 获取管理器名称
+   * @returns 管理器名称
+   */
+  getName(): string {
+    return this.managerName;
+  }
+
+  /**
+   * 设置服务容器
+   * 将管理器注册到服务容器中
+   * @param container 服务容器实例
+   * @returns 当前管理器实例（链式调用）
+   */
+  setContainer(container: ServiceContainer): this {
+    this.container = container;
+    // 注册自身到容器
+    const serviceName = this.managerName === "default"
+      ? "queueManager"
+      : `queueManager:${this.managerName}`;
+    container.registerSingleton(serviceName, () => this);
+    return this;
+  }
+
+  /**
+   * 获取服务容器
+   * @returns 服务容器实例或 undefined
+   */
+  getContainer(): ServiceContainer | undefined {
+    return this.container;
+  }
+
+  /**
+   * 从服务容器获取队列管理器
+   * @param container 服务容器实例
+   * @param name 管理器名称（默认：default）
+   * @returns 队列管理器实例
+   */
+  static fromContainer(container: ServiceContainer, name?: string): QueueManager {
+    const serviceName = !name || name === "default"
+      ? "queueManager"
+      : `queueManager:${name}`;
+    return container.get<QueueManager>(serviceName);
   }
 
   /**
@@ -835,4 +905,36 @@ export class QueueManager {
       this.removeCronTask(name);
     }
   }
+}
+
+/**
+ * 创建队列管理器的工厂函数
+ * @param options 队列管理器配置选项
+ * @param container 服务容器实例（可选）
+ * @returns 队列管理器实例
+ *
+ * @example
+ * ```typescript
+ * import { createQueueManager, RedisQueueAdapter } from "@dreamer/queue";
+ * import { ServiceContainer } from "@dreamer/service";
+ *
+ * const container = new ServiceContainer();
+ * const adapter = new RedisQueueAdapter({ client: redisClient });
+ *
+ * // 创建并注册到服务容器
+ * const queueManager = createQueueManager({ adapter }, container);
+ *
+ * // 之后可以从容器获取
+ * const queueFromContainer = QueueManager.fromContainer(container);
+ * ```
+ */
+export function createQueueManager(
+  options: QueueManagerOptions | QueueManagerOptionsExtended,
+  container?: ServiceContainer,
+): QueueManager {
+  const manager = new QueueManager(options);
+  if (container) {
+    manager.setContainer(container);
+  }
+  return manager;
 }

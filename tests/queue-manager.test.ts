@@ -3,8 +3,13 @@
  */
 
 import { IS_DENO } from "@dreamer/runtime-adapter";
+import { ServiceContainer } from "@dreamer/service";
 import { describe, expect, it } from "@dreamer/test";
-import { MemoryQueueAdapter, QueueManager } from "../src/mod.ts";
+import {
+  createQueueManager,
+  MemoryQueueAdapter,
+  QueueManager,
+} from "../src/mod.ts";
 
 describe("Queue > QueueManager 类功能", () => {
   describe("队列管理", () => {
@@ -350,6 +355,192 @@ describe("Queue > QueueManager 类功能", () => {
       expect(() => {
         new QueueManager({ adapter: null as any });
       }).toThrow();
+    });
+  });
+
+  describe("ServiceContainer 集成", () => {
+    it("应该能够设置和获取服务容器", async () => {
+      const container = new ServiceContainer();
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = new QueueManager({ adapter, autoRecover: false });
+
+      // 初始状态：没有服务容器
+      expect(queueManager.getContainer()).toBeUndefined();
+
+      // 设置服务容器
+      const result = queueManager.setContainer(container);
+
+      // 链式调用应该返回自身
+      expect(result).toBe(queueManager);
+
+      // 验证已设置
+      expect(queueManager.getContainer()).toBe(container);
+
+      await queueManager.close();
+    });
+
+    it("应该在设置容器时自动注册到服务容器", async () => {
+      const container = new ServiceContainer();
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = new QueueManager({ adapter, autoRecover: false });
+
+      queueManager.setContainer(container);
+
+      // 从容器获取应该返回同一个实例
+      const fromContainer = container.get<QueueManager>("queueManager");
+      expect(fromContainer).toBe(queueManager);
+
+      await queueManager.close();
+    });
+
+    it("应该支持通过 fromContainer 静态方法获取管理器", async () => {
+      const container = new ServiceContainer();
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = new QueueManager({ adapter, autoRecover: false });
+
+      queueManager.setContainer(container);
+
+      // 使用静态方法获取
+      const fromContainer = QueueManager.fromContainer(container);
+      expect(fromContainer).toBe(queueManager);
+
+      await queueManager.close();
+    });
+
+    it("应该支持命名管理器", async () => {
+      const container = new ServiceContainer();
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = new QueueManager({
+        adapter,
+        autoRecover: false,
+        name: "custom",
+      });
+
+      expect(queueManager.getName()).toBe("custom");
+
+      queueManager.setContainer(container);
+
+      // 应该使用命名键注册
+      const fromContainer = QueueManager.fromContainer(container, "custom");
+      expect(fromContainer).toBe(queueManager);
+
+      await queueManager.close();
+    });
+
+    it("应该支持多个命名管理器", async () => {
+      const container = new ServiceContainer();
+      const adapter1 = new MemoryQueueAdapter();
+      const adapter2 = new MemoryQueueAdapter();
+
+      const manager1 = new QueueManager({
+        adapter: adapter1,
+        autoRecover: false,
+        name: "redis",
+      });
+      const manager2 = new QueueManager({
+        adapter: adapter2,
+        autoRecover: false,
+        name: "rabbitmq",
+      });
+
+      manager1.setContainer(container);
+      manager2.setContainer(container);
+
+      // 验证两个都能正确获取
+      const fromContainer1 = QueueManager.fromContainer(container, "redis");
+      const fromContainer2 = QueueManager.fromContainer(container, "rabbitmq");
+
+      expect(fromContainer1).toBe(manager1);
+      expect(fromContainer2).toBe(manager2);
+
+      await manager1.close();
+      await manager2.close();
+    });
+
+    it("应该在获取不存在的管理器时抛出错误", () => {
+      const container = new ServiceContainer();
+
+      expect(() => {
+        QueueManager.fromContainer(container);
+      }).toThrow();
+    });
+
+    it("默认名称应该是 default", async () => {
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = new QueueManager({ adapter, autoRecover: false });
+
+      expect(queueManager.getName()).toBe("default");
+
+      await queueManager.close();
+    });
+  });
+
+  describe("createQueueManager 工厂函数", () => {
+    it("应该创建队列管理器", async () => {
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = createQueueManager({ adapter, autoRecover: false });
+
+      expect(queueManager).toBeInstanceOf(QueueManager);
+      expect(queueManager.getName()).toBe("default");
+
+      await queueManager.close();
+    });
+
+    it("应该支持传入服务容器", async () => {
+      const container = new ServiceContainer();
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = createQueueManager(
+        { adapter, autoRecover: false },
+        container,
+      );
+
+      expect(queueManager.getContainer()).toBe(container);
+
+      // 从容器获取
+      const fromContainer = QueueManager.fromContainer(container);
+      expect(fromContainer).toBe(queueManager);
+
+      await queueManager.close();
+    });
+
+    it("应该支持命名管理器", async () => {
+      const container = new ServiceContainer();
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = createQueueManager(
+        { adapter, autoRecover: false, name: "custom" },
+        container,
+      );
+
+      expect(queueManager.getName()).toBe("custom");
+
+      const fromContainer = QueueManager.fromContainer(container, "custom");
+      expect(fromContainer).toBe(queueManager);
+
+      await queueManager.close();
+    });
+
+    it("应该在不传入容器时正常工作", async () => {
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = createQueueManager({ adapter, autoRecover: false });
+
+      expect(queueManager.getContainer()).toBeUndefined();
+
+      await queueManager.close();
+    });
+
+    it("应该支持链式调用", async () => {
+      const container = new ServiceContainer();
+      const adapter = new MemoryQueueAdapter();
+      const queueManager = createQueueManager(
+        { adapter, autoRecover: false },
+        container,
+      );
+
+      // 创建队列测试
+      const queue = queueManager.createQueue("test", { concurrency: 2 });
+      expect(queue).toBeTruthy();
+
+      await queueManager.close();
     });
   });
 });

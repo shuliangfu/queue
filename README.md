@@ -3,7 +3,8 @@
 > 一个兼容 Deno 和 Bun 的队列和任务调度库，提供任务队列、任务调度、并发控制等功能
 
 [![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
+[![Tests](https://img.shields.io/badge/tests-100%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -47,6 +48,7 @@
   - **内存适配器**：仅用于开发和测试，不支持持久化
   - **故障恢复**：自动恢复超时的处理中任务
   - ⚠️ **重要**：生产环境必须使用持久化适配器，应用重启后任务不会丢失
+- **服务容器集成**：支持依赖注入和服务容器管理
 
 ## 使用场景
 
@@ -73,6 +75,7 @@ deno add jsr:@dreamer/queue
   - **RabbitMQ 适配器**：需要 RabbitMQ 客户端库（如 `npm:amqplib`）
   - **MongoDB 适配器**：需要 MongoDB 客户端库（如 `npm:mongodb`）
   - **内存适配器**：无需额外依赖，但仅用于开发和测试
+  - **服务容器**：`jsr:@dreamer/service`（可选，用于依赖注入）
   - ⚠️ **重要**：生产环境必须使用持久化适配器，内存适配器不支持持久化（会丢失数据）
 
 ## 基本使用
@@ -402,6 +405,42 @@ await emailQueue.clear();
 
 ## 高级功能
 
+### ServiceContainer 集成
+
+```typescript
+import { createQueueManager, QueueManager, RedisQueueAdapter } from "jsr:@dreamer/queue";
+import { ServiceContainer } from "jsr:@dreamer/service";
+import { createClient } from "npm:redis";
+
+// 创建服务容器
+const container = new ServiceContainer();
+
+// 创建 Redis 客户端
+const redisClient = createClient({ url: "redis://localhost:6379" });
+await redisClient.connect();
+
+// 方式1：使用工厂函数创建并注册到容器
+const queueManager = createQueueManager(
+  {
+    adapter: new RedisQueueAdapter({ client: redisClient }),
+    autoRecover: true,
+    name: "main", // 可选：命名管理器
+  },
+  container, // 自动注册到服务容器
+);
+
+// 方式2：手动注册到容器
+const manager2 = new QueueManager({
+  adapter: new RedisQueueAdapter({ client: redisClient }),
+  name: "backup",
+});
+manager2.setContainer(container);
+
+// 从容器获取管理器
+const mainManager = QueueManager.fromContainer(container, "main");
+const backupManager = QueueManager.fromContainer(container, "backup");
+```
+
 ### 任务优先级
 
 ```typescript
@@ -604,10 +643,52 @@ const queueManager = new QueueManager({
 创建队列管理器。
 
 **参数**：
-- `options`: `QueueManagerOptions` - 管理器选项
+- `options`: `QueueManagerOptions | QueueManagerOptionsExtended` - 管理器选项
   - `adapter`: `QueueAdapter` - 队列适配器（可选，默认使用内存适配器）
   - `autoRecover`: `boolean` - 是否自动恢复未完成的任务（默认：true）
   - `recoverTimeout`: `number` - 恢复超时任务的时间（毫秒，默认：30000）
+  - `name`: `string` - 管理器名称，用于服务容器注册（默认：default）
+
+#### `getName()`
+
+获取管理器名称。
+
+**返回**：`string` - 管理器名称
+
+#### `setContainer(container)`
+
+设置服务容器，将管理器注册到服务容器中。
+
+**参数**：
+- `container`: `ServiceContainer` - 服务容器实例
+
+**返回**：`this` - 当前管理器实例（链式调用）
+
+#### `getContainer()`
+
+获取服务容器。
+
+**返回**：`ServiceContainer | undefined` - 服务容器实例
+
+#### `static fromContainer(container, name?)`
+
+从服务容器获取队列管理器（静态方法）。
+
+**参数**：
+- `container`: `ServiceContainer` - 服务容器实例
+- `name`: `string` - 管理器名称（默认：default）
+
+**返回**：`QueueManager` - 队列管理器实例
+
+#### `createQueueManager(options, container?)`
+
+工厂函数，创建队列管理器。
+
+**参数**：
+- `options`: `QueueManagerOptions | QueueManagerOptionsExtended` - 管理器选项
+- `container`: `ServiceContainer` - 服务容器实例（可选）
+
+**返回**：`QueueManager` - 队列管理器实例
 
 #### `createQueue(name, options?)`
 

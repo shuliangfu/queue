@@ -2,20 +2,21 @@
 
 ## 测试概览
 
-- **测试库版本**: @dreamer/test@^1.0.0-beta.13
-- **运行时适配器版本**: @dreamer/runtime-adapter@1.0.0-beta.17
+- **测试库版本**: @dreamer/test@^1.0.0-beta.39
+- **运行时适配器版本**: @dreamer/runtime-adapter@^1.0.0-beta.22
+- **服务容器版本**: @dreamer/service@^1.0.0-beta.4
 - **测试框架**: @dreamer/test (兼容 Deno 和 Bun)
 - **测试时间**: 2026-01-17
 - **测试环境**:
   - Deno 2.6+
-  - Bun 1.3.5+
+  - Bun 1.3.5
 
 ## 测试结果
 
 ### 总体统计
 
-- **总测试数**: 88
-- **通过**: 88 ✅
+- **总测试数**: 100
+- **通过**: 100 ✅
 - **失败**: 0
 - **通过率**: 100% ✅
 - **测试执行时间**: ~90秒（Bun 环境）
@@ -31,7 +32,7 @@
 | `mongodb.test.ts` | 13 | ✅ 全部通过 | MongoDB 适配器完整测试（+4 聚合管道优化测试） |
 | `performance.test.ts` | 6 | ✅ 全部通过 | **新增** 性能优化测试 |
 | `priority.test.ts` | 3 | ✅ 全部通过 | 任务优先级功能测试 |
-| `queue-manager.test.ts` | 11 | ✅ 全部通过 | QueueManager 类完整功能 |
+| `queue-manager.test.ts` | 23 | ✅ 全部通过 | QueueManager 类完整功能（+12 ServiceContainer 集成测试） |
 | `queue.test.ts` | 11 | ✅ 全部通过 | Queue 类完整功能 |
 | `rabbitmq.test.ts` | 9 | ✅ 全部通过 | RabbitMQ 适配器完整测试 |
 | `redis.test.ts` | 12 | ✅ 全部通过 | Redis 适配器完整测试（+3 MGET 批量获取优化测试） |
@@ -170,8 +171,22 @@
   - 应该关闭管理器并停止所有定时任务
 - ✅ 错误处理
   - 应该在创建管理器时要求提供适配器
+- ✅ **ServiceContainer 集成**（新增）
+  - 应该能够设置和获取服务容器
+  - 应该在设置容器时自动注册到服务容器
+  - 应该支持通过 fromContainer 静态方法获取管理器
+  - 应该支持命名管理器
+  - 应该支持多个命名管理器
+  - 应该在获取不存在的管理器时抛出错误
+  - 默认名称应该是 default
+- ✅ **createQueueManager 工厂函数**（新增）
+  - 应该创建队列管理器
+  - 应该支持传入服务容器
+  - 应该支持命名管理器
+  - 应该在不传入容器时正常工作
+  - 应该支持链式调用
 
-**测试结果**: 11 个测试全部通过
+**测试结果**: 23 个测试全部通过
 
 **实现特点**:
 - ✅ 队列管理功能完整
@@ -179,6 +194,8 @@
 - ✅ 自动恢复机制验证
 - ✅ 生命周期管理正确
 - ✅ 错误处理完善
+- ✅ **ServiceContainer 集成**（新增）
+- ✅ **工厂函数支持**（新增）
 
 ### 8. Queue 类完整功能 (queue.test.ts)
 
@@ -512,7 +529,8 @@
 
 ---
 
-**测试报告生成时间**: 2026-01-17
-**测试框架**: @dreamer/test@^1.0.0-beta.13
-**运行时适配器**: @dreamer/runtime-adapter@1.0.0-beta.17
-**测试总数**: 88（+9 Memcached 适配器测试，+13 性能优化测试）
+**测试报告生成时间**: 2026-01-30
+**测试框架**: @dreamer/test@^1.0.0-beta.39
+**运行时适配器**: @dreamer/runtime-adapter@^1.0.0-beta.22
+**服务容器**: @dreamer/service@^1.0.0-beta.4
+**测试总数**: 100（+12 ServiceContainer 集成测试）

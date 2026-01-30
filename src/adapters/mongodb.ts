@@ -374,8 +374,8 @@ export class MongoDBQueueAdapter implements QueueAdapter {
     const now = Date.now();
 
     // 性能优化：使用聚合管道在数据库层面排序和限制，避免在内存中处理大量数据
-    // 优先级映射：low=1, normal=2, high=3, urgent=4
-    const priorityMap: Record<string, number> = {
+    // 优先级映射：low=1, normal=2, high=3, urgent=4（在聚合管道中使用 $switch 实现）
+    const _priorityMap: Record<string, number> = {
       low: 1,
       normal: 2,
       high: 3,
