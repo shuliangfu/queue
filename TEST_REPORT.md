@@ -6,7 +6,7 @@
 - **运行时适配器版本**: @dreamer/runtime-adapter@^1.0.0-beta.22
 - **服务容器版本**: @dreamer/service@^1.0.0-beta.4
 - **测试框架**: @dreamer/test (兼容 Deno 和 Bun)
-- **测试时间**: 2026-01-17
+- **测试时间**: 2026-01-30
 - **测试环境**:
   - Deno 2.6+
   - Bun 1.3.5
@@ -39,7 +39,7 @@
 
 ## 功能测试详情
 
-### 1. 适配器接口完整功能 (adapter-interface.test.ts)
+### 1. 适配器接口完整功能 (adapter-interface.test.ts) - 7 个测试
 
 **测试场景**:
 
@@ -60,7 +60,7 @@
 - ✅ 边界情况处理（不存在的任务、空队列）
 - ✅ 统计信息准确性验证
 
-### 2. 延迟任务功能 (delay.test.ts)
+### 2. 延迟任务功能 (delay.test.ts) - 4 个测试
 
 **测试场景**:
 
@@ -78,7 +78,7 @@
 - ✅ 多个延迟任务按时间顺序处理
 - ✅ 无延迟任务立即处理
 
-### 3. MemoryQueueAdapter 基础功能 (mod.test.ts)
+### 3. MemoryQueueAdapter 基础功能 (mod.test.ts) - 3 个测试
 
 **测试场景**:
 
@@ -94,7 +94,7 @@
 - ✅ 任务添加、获取、处理流程正常
 - ⚠️ **注意**：内存适配器仅用于开发和测试，不支持持久化
 
-### 4. Memcached 适配器 (memcached.test.ts)
+### 4. Memcached 适配器 (memcached.test.ts) - 9 个测试
 
 **测试场景**:
 
@@ -118,7 +118,7 @@
 - ✅ 高性能内存缓存特性支持
 - ✅ 支持批量获取优化（getMulti）
 
-### 5. MongoDB 适配器 (mongodb.test.ts)
+### 5. MongoDB 适配器 (mongodb.test.ts) - 13 个测试
 
 **测试场景**:
 
@@ -146,7 +146,7 @@
   - 原子操作（findOneAndUpdate）验证
   - 空结果处理验证
 
-### 6. 优先级功能 (priority.test.ts)
+### 6. 优先级功能 (priority.test.ts) - 3 个测试
 
 **测试场景**:
 
@@ -164,7 +164,7 @@
 - ✅ 高优先级任务优先处理
 - ✅ 相同优先级任务按创建时间排序（FIFO）
 
-### 7. QueueManager 类功能 (queue-manager.test.ts)
+### 7. QueueManager 类功能 (queue-manager.test.ts) - 23 个测试
 
 **测试场景**:
 
@@ -211,7 +211,7 @@
 - ✅ **ServiceContainer 集成**（新增）
 - ✅ **工厂函数支持**（新增）
 
-### 8. Queue 类完整功能 (queue.test.ts)
+### 8. Queue 类完整功能 (queue.test.ts) - 11 个测试
 
 **测试场景**:
 
@@ -243,7 +243,7 @@
 - ✅ 并发控制有效
 - ✅ 边界情况处理完善
 
-### 9. RabbitMQ 适配器 (rabbitmq.test.ts)
+### 9. RabbitMQ 适配器 (rabbitmq.test.ts) - 9 个测试
 
 **测试场景**:
 
@@ -266,7 +266,7 @@
 - ✅ 持久化存储验证
 - ✅ 企业级消息队列特性支持
 
-### 10. Redis 适配器 (redis.test.ts)
+### 10. Redis 适配器 (redis.test.ts) - 12 个测试
 
 **测试场景**:
 
@@ -293,7 +293,7 @@
   - 部分键不存在的情况处理验证
   - 单个任务回退逻辑验证
 
-### 11. 性能优化测试 (performance.test.ts) ⭐ 新增
+### 11. 性能优化测试 (performance.test.ts) - 6 个测试
 
 **测试场景**:
 
@@ -554,7 +554,8 @@
 
 ---
 
-**测试报告生成时间**: 2026-01-30 **测试框架**: @dreamer/test@^1.0.0-beta.39
-**运行时适配器**: @dreamer/runtime-adapter@^1.0.0-beta.22 **服务容器**:
-@dreamer/service@^1.0.0-beta.4 **测试总数**: 100（+12 ServiceContainer
-集成测试）
+**测试报告生成时间**: 2026-01-30
+**测试框架**: @dreamer/test@^1.0.0-beta.39
+**运行时适配器**: @dreamer/runtime-adapter@^1.0.0-beta.22
+**服务容器**: @dreamer/service@^1.0.0-beta.4
+**测试总数**: 100（+12 ServiceContainer 集成测试）
