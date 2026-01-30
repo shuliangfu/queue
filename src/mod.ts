@@ -573,7 +573,8 @@ export class QueueManager {
     this.adapter = options.adapter;
     this.autoRecover = options.autoRecover ?? true;
     this.recoverTimeout = options.recoverTimeout || 30000;
-    this.managerName = (options as QueueManagerOptionsExtended).name || "default";
+    this.managerName = (options as QueueManagerOptionsExtended).name ||
+      "default";
 
     // 启动自动恢复
     if (this.autoRecover) {
@@ -619,7 +620,10 @@ export class QueueManager {
    * @param name 管理器名称（默认：default）
    * @returns 队列管理器实例
    */
-  static fromContainer(container: ServiceContainer, name?: string): QueueManager {
+  static fromContainer(
+    container: ServiceContainer,
+    name?: string,
+  ): QueueManager {
     const serviceName = !name || name === "default"
       ? "queueManager"
       : `queueManager:${name}`;

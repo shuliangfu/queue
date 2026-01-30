@@ -161,7 +161,9 @@ describe("Queue > Queue 类完整功能", () => {
         waited += checkInterval;
 
         const jobStatus = await queue.getJob(job.id);
-        if (jobStatus?.status === "completed" || jobStatus?.status === "failed") {
+        if (
+          jobStatus?.status === "completed" || jobStatus?.status === "failed"
+        ) {
           break;
         }
       }
@@ -326,7 +328,7 @@ describe("Queue > Queue 类完整功能", () => {
         waited += checkInterval;
 
         const allCompleted = (await Promise.all(
-          jobs.map((j) => queue.getJob(j.id))
+          jobs.map((j) => queue.getJob(j.id)),
         )).every((j) => j?.status === "completed");
 
         if (allCompleted) {

@@ -409,7 +409,11 @@ export class MongoDBQueueAdapter implements QueueAdapter {
           // 计算延迟到期时间
           delayExpiry: {
             $cond: {
-              if: { $and: [{ $ne: ["$delay", null] }, { $ne: ["$delay", undefined] }] },
+              if: {
+                $and: [{ $ne: ["$delay", null] }, {
+                  $ne: ["$delay", undefined],
+                }],
+              },
               then: { $add: ["$createdAt", "$delay"] },
               else: 0, // 无延迟任务，立即可用
             },
