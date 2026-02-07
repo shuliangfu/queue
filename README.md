@@ -1,7 +1,8 @@
 # @dreamer/queue
 
-> 一个兼容 Deno 和 Bun
-> 的队列和任务调度库，提供任务队列、任务调度、并发控制等功能
+> A queue and task scheduling library compatible with Deno and Bun, providing task queues, scheduling, concurrency control, and more
+
+English | [中文 (Chinese)](./README-zh.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
@@ -9,13 +10,13 @@
 
 ---
 
-## 🎯 功能
+## 🎯 Features
 
-队列和任务调度库，用于异步任务处理、定时任务、批量处理等。
+Queue and task scheduling library for async task processing, cron jobs, batch processing, and more.
 
 ---
 
-## 📦 安装
+## 📦 Installation
 
 ```bash
 deno add jsr:@dreamer/queue
@@ -23,87 +24,86 @@ deno add jsr:@dreamer/queue
 
 ---
 
-## 🌍 环境兼容性
+## 🌍 Environment Compatibility
 
-| 环境   | 支持情况 | 说明                       |
-| ------ | -------- | -------------------------- |
-| Deno   | ✅       | Deno 2.6+                  |
-| Bun    | ✅       | Bun 1.3.5+                 |
-| 服务端 | ✅       | 兼容 Deno 和 Bun 运行时    |
-| 客户端 | ❌       | 浏览器环境无法运行任务队列 |
+| Environment | Support | Notes                           |
+| ----------- | ------- | ------------------------------- |
+| Deno        | ✅      | Deno 2.6+                       |
+| Bun         | ✅      | Bun 1.3.5+                      |
+| Server      | ✅      | Compatible with Deno and Bun    |
+| Client      | ❌      | Browser cannot run task queues  |
 
-**依赖说明**：
+**Dependencies**:
 
-- **Redis 适配器**：需要 `npm:redis` 或 `npm:ioredis`
-- **Memcached 适配器**：需要 `npm:memcache-client`
-- **RabbitMQ 适配器**：需要 `npm:amqplib`
-- **MongoDB 适配器**：需要 `npm:mongodb`
-- **内存适配器**：无需额外依赖，仅用于开发和测试
-- **服务容器**：`jsr:@dreamer/service`（可选，用于依赖注入）
-
----
-
-## ✨ 特性
-
-- **多队列支持**（任务隔离，不会互相阻塞）：
-  - 支持多个独立的队列实例
-  - 每个任务类型可以使用独立的队列
-  - 不同队列之间完全隔离，互不影响
-  - 每个队列有独立的处理循环和并发控制
-- **任务队列**：
-  - FIFO 队列（先进先出）
-  - 优先级队列（高优先级任务优先执行）
-  - 延迟队列（延迟执行）
-- **任务调度**：
-  - 定时任务（Cron 表达式支持）
-  - 延迟任务（指定时间后执行）
-  - 周期性任务（间隔执行）
-- **并发控制**：
-  - 每个队列独立的并发控制
-  - 可配置每个队列的最大并发数
-- **任务管理**：
-  - 任务重试（可配置重试次数）
-  - 任务状态追踪（pending、processing、completed、failed）
-  - 任务优先级设置
-  - 任务超时控制
-- **持久化支持**（推荐使用）：
-  - **Redis 适配器**：基于 Redis 的持久化存储（推荐，高性能）
-  - **Memcached 适配器**：基于 Memcached 的内存缓存存储
-  - **RabbitMQ 适配器**：基于 RabbitMQ 的持久化存储（企业级）
-  - **MongoDB 适配器**：基于 MongoDB 的持久化存储
-  - **内存适配器**：仅用于开发和测试
-- **服务容器集成**：支持依赖注入和服务容器管理
+- **Redis adapter**: Requires `npm:redis` or `npm:ioredis`
+- **Memcached adapter**: Requires `npm:memcache-client`
+- **RabbitMQ adapter**: Requires `npm:amqplib`
+- **MongoDB adapter**: Requires `npm:mongodb`
+- **Memory adapter**: No extra dependencies, dev/test only
+- **Service container**: `jsr:@dreamer/service` (optional, for dependency injection)
 
 ---
 
-## 🎯 使用场景
+## ✨ Characteristics
 
-- 异步任务处理（邮件发送、图片处理等）
-- 定时任务（数据同步、报表生成等）
-- 批量处理（批量导入、批量导出等）
-- 后台任务处理
-- 多任务类型并行处理
+- **Multi-queue support** (task isolation, no cross-blocking):
+  - Multiple independent queue instances
+  - Each task type can use a separate queue
+  - Queues are fully isolated
+  - Each queue has its own processing loop and concurrency control
+- **Task queues**:
+  - FIFO queue (first-in first-out)
+  - Priority queue (higher priority first)
+  - Delayed queue (scheduled execution)
+- **Task scheduling**:
+  - Cron jobs (Cron expression support)
+  - Delayed jobs (execute after specified time)
+  - Recurring jobs (interval execution)
+- **Concurrency control**:
+  - Independent concurrency per queue
+  - Configurable max concurrency per queue
+- **Task management**:
+  - Job retry (configurable retry count)
+  - Job status tracking (pending, processing, completed, failed)
+  - Job priority
+  - Job timeout
+- **Persistence** (recommended):
+  - **Redis adapter**: Redis-based persistence (recommended, high performance)
+  - **Memcached adapter**: Memcached in-memory cache
+  - **RabbitMQ adapter**: RabbitMQ persistence (enterprise)
+  - **MongoDB adapter**: MongoDB persistence
+  - **Memory adapter**: Dev/test only
+- **Service container integration**: Supports dependency injection and service container
 
 ---
 
-## 🚀 快速开始
+## 🎯 Use Cases
 
-### 创建队列管理器
+- Async task processing (email sending, image processing, etc.)
+- Cron jobs (data sync, report generation, etc.)
+- Batch processing (bulk import, bulk export, etc.)
+- Background job processing
+- Parallel processing of multiple task types
 
-**⚠️ 重要**：生产环境必须使用持久化适配器（Redis、Memcached、RabbitMQ 或
-MongoDB）。
+---
 
-#### 使用 Redis 适配器（推荐）
+## 🚀 Quick Start
+
+### Create Queue Manager
+
+**⚠️ Important**: Production must use a persistent adapter (Redis, Memcached, RabbitMQ, or MongoDB).
+
+#### Using Redis Adapter (Recommended)
 
 ```typescript
 import { QueueManager, RedisQueueAdapter } from "jsr:@dreamer/queue";
 import { createClient } from "npm:redis";
 
-// 创建 Redis 客户端
+// Create Redis client
 const redisClient = createClient({ url: "redis://localhost:6379" });
 await redisClient.connect();
 
-// 创建队列管理器
+// Create queue manager
 const queueManager = new QueueManager({
   adapter: new RedisQueueAdapter({ client: redisClient }),
   autoRecover: true,
@@ -111,7 +111,7 @@ const queueManager = new QueueManager({
 });
 ```
 
-#### 使用 MongoDB 适配器
+#### Using MongoDB Adapter
 
 ```typescript
 import { MongoDBQueueAdapter, QueueManager } from "jsr:@dreamer/queue";
@@ -127,95 +127,95 @@ await adapter.connect();
 const queueManager = new QueueManager({ adapter, autoRecover: true });
 ```
 
-### 创建和使用队列
+### Create and Use Queue
 
 ```typescript
-// 创建队列
+// Create queue
 const emailQueue = queueManager.createQueue("email", {
   concurrency: 5,
   retry: 3,
   timeout: 60000,
 });
 
-// 添加任务
+// Add job
 await emailQueue.add("send-welcome", { userId: 123 });
 
-// 处理任务
+// Process jobs
 emailQueue.process(async (job) => {
-  console.log("处理邮件任务:", job.data);
+  console.log("Processing email job:", job.data);
 });
 ```
 
-### 定时任务
+### Cron Jobs
 
 ```typescript
-// 添加定时任务（每天凌晨执行）
+// Add cron job (runs daily at midnight)
 queueManager.schedule("daily-report", "0 0 * * *", async (data) => {
-  console.log("执行每日报表生成");
+  console.log("Running daily report");
 });
 
-// 移除定时任务
+// Remove cron job
 queueManager.unschedule("daily-report");
 ```
 
 ---
 
-## 📚 API 文档
+## 📚 API Reference
 
 ### QueueManager
 
 #### `new QueueManager(options)`
 
-创建队列管理器。
+Create a queue manager.
 
-| 参数           | 类型         | 默认值  | 说明                       |
-| -------------- | ------------ | ------- | -------------------------- |
-| adapter        | QueueAdapter | -       | 队列适配器（必需）         |
-| autoRecover    | boolean      | true    | 是否自动恢复未完成的任务   |
-| recoverTimeout | number       | 30000   | 恢复超时任务的时间（毫秒） |
-| name           | string       | default | 管理器名称（用于服务容器） |
+| Parameter     | Type          | Default | Description                        |
+| -------------- | ------------- | ------- | ---------------------------------- |
+| adapter        | QueueAdapter  | -       | Queue adapter (required)           |
+| autoRecover    | boolean       | true    | Auto recover incomplete jobs       |
+| recoverTimeout | number        | 30000   | Timeout for recovery (ms)          |
+| name           | string        | default | Manager name (for service container) |
 
-#### 方法
+#### Methods
 
-| 方法                                    | 返回值             | 说明             |
-| --------------------------------------- | ------------------ | ---------------- |
-| `createQueue(name, options?)`           | Queue              | 创建队列         |
-| `getQueue(name)`                        | Queue \| undefined | 获取队列         |
-| `schedule(name, cron, handler, opts?)`  | void               | 添加定时任务     |
-| `unschedule(name)`                      | void               | 移除定时任务     |
-| `close()`                               | Promise\<void\>    | 关闭管理器       |
-| `getName()`                             | string             | 获取管理器名称   |
-| `setContainer(container)`               | this               | 设置服务容器     |
-| `getContainer()`                        | ServiceContainer   | 获取服务容器     |
-| `static fromContainer(container, name)` | QueueManager       | 从容器获取管理器 |
+| Method                                  | Returns           | Description       |
+| --------------------------------------- | ----------------- | ----------------- |
+| `createQueue(name, options?)`           | Queue             | Create queue      |
+| `getQueue(name)`                        | Queue \| undefined | Get queue         |
+| `schedule(name, cron, handler, opts?)`   | void              | Add cron job      |
+| `unschedule(name)`                      | void              | Remove cron job   |
+| `close()`                               | Promise\<void\>   | Close manager     |
+| `getName()`                             | string            | Get manager name  |
+| `setContainer(container)`               | this              | Set service container |
+| `getContainer()`                        | ServiceContainer  | Get service container |
+| `static fromContainer(container, name)` | QueueManager      | Get manager from container |
 
 ### Queue
 
 #### `add(name, data, options?)`
 
-添加任务到队列。
+Add job to queue.
 
-| 参数        | 类型        | 说明                             |
-| ----------- | ----------- | -------------------------------- |
-| name        | string      | 任务名称                         |
-| data        | JobData     | 任务数据                         |
-| priority    | JobPriority | 优先级（low/normal/high/urgent） |
-| delay       | number      | 延迟执行时间（毫秒）             |
-| maxAttempts | number      | 最大重试次数                     |
-| timeout     | number      | 超时时间（毫秒）                 |
+| Parameter   | Type        | Description                       |
+| ----------- | ----------- | --------------------------------- |
+| name        | string      | Job name                          |
+| data        | JobData     | Job data                          |
+| priority    | JobPriority | Priority (low/normal/high/urgent)  |
+| delay       | number      | Delay before execution (ms)       |
+| maxAttempts | number      | Max retry count                   |
+| timeout     | number      | Timeout (ms)                      |
 
-#### 方法
+#### Methods
 
-| 方法                 | 返回值           | 说明         |
-| -------------------- | ---------------- | ------------ |
-| `process(processor)` | void             | 处理任务     |
-| `getJob(jobId)`      | Promise\<Job\>   | 获取任务     |
-| `getJobs()`          | Promise\<Job[]\> | 获取所有任务 |
-| `getStats()`         | Promise\<Stats\> | 获取统计信息 |
-| `clear()`            | Promise\<void\>  | 清空队列     |
-| `stop()`             | void             | 停止处理任务 |
+| Method                 | Returns           | Description     |
+| ---------------------- | ----------------- | --------------- |
+| `process(processor)`   | void              | Process jobs    |
+| `getJob(jobId)`        | Promise\<Job\>    | Get job         |
+| `getJobs()`            | Promise\<Job[]\>  | Get all jobs    |
+| `getStats()`           | Promise\<Stats\>  | Get statistics  |
+| `clear()`              | Promise\<void\>   | Clear queue     |
+| `stop()`               | void              | Stop processing |
 
-### createQueueManager 工厂函数
+### createQueueManager Factory
 
 ```typescript
 import { createQueueManager } from "jsr:@dreamer/queue";
@@ -224,20 +224,20 @@ import { ServiceContainer } from "jsr:@dreamer/service";
 const container = new ServiceContainer();
 const queueManager = createQueueManager({ adapter, name: "main" }, container);
 
-// 从容器获取
+// Get from container
 const manager = QueueManager.fromContainer(container, "main");
 ```
 
-### 类型定义
+### Type Definitions
 
 ```typescript
-// 任务状态
+// Job status
 type JobStatus = "pending" | "processing" | "completed" | "failed";
 
-// 任务优先级
+// Job priority
 type JobPriority = "low" | "normal" | "high" | "urgent";
 
-// 任务接口
+// Job interface
 interface Job {
   id: string;
   name: string;
@@ -255,11 +255,11 @@ interface Job {
 
 ---
 
-## 🔧 高级配置
+## 🔧 Advanced Configuration
 
-### 适配器配置
+### Adapter Configuration
 
-#### Redis 适配器
+#### Redis Adapter
 
 ```typescript
 const adapter = new RedisQueueAdapter({
@@ -272,7 +272,7 @@ const adapter = new RedisQueueAdapter({
 });
 ```
 
-#### RabbitMQ 适配器
+#### RabbitMQ Adapter
 
 ```typescript
 const adapter = new RabbitMQQueueAdapter({
@@ -283,7 +283,7 @@ const adapter = new RabbitMQQueueAdapter({
 });
 ```
 
-#### Memcached 适配器
+#### Memcached Adapter
 
 ```typescript
 const adapter = new MemcachedQueueAdapter({
@@ -295,66 +295,72 @@ const adapter = new MemcachedQueueAdapter({
 });
 ```
 
-### Cron 表达式
+### Cron Expressions
 
-定时任务使用 UTC 时区，支持标准的 Cron 表达式：
+Cron jobs use UTC. Supports standard Cron expressions:
 
-| 表达式           | 说明        |
-| ---------------- | ----------- |
-| `* * * * *`      | 每分钟执行  |
-| `0 * * * *`      | 每小时执行  |
-| `0 0 * * *`      | 每天执行    |
-| `*/5 * * * *`    | 每5分钟执行 |
-| `*/30 * * * * *` | 每30秒执行  |
+| Expression    | Description       |
+| ------------- | ----------------- |
+| `* * * * *`   | Every minute      |
+| `0 * * * *`   | Every hour        |
+| `0 0 * * *`   | Daily             |
+| `*/5 * * * *` | Every 5 minutes    |
+| `*/30 * * * * *` | Every 30 seconds |
 
-### 多队列隔离
+### Multi-Queue Isolation
 
-队列库支持多个独立的队列实例，每个队列完全隔离，互不阻塞：
+The library supports multiple independent queue instances, each fully isolated:
 
-1. **独立的处理循环**：每个队列有独立的 `processLoop()` 异步循环
-2. **任务隔离**：每个队列只处理自己队列中的任务
-3. **独立的并发控制**：每个队列有独立的并发限制
-4. **阻塞隔离**：一个队列的慢任务不会影响其他队列
-
----
-
-## 📊 测试报告
-
-| 项目     | 结果       |
-| -------- | ---------- |
-| 测试总数 | 100        |
-| 通过     | 100 ✅     |
-| 失败     | 0          |
-| 通过率   | 100%       |
-| 测试时间 | 2026-01-30 |
-
-详细测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
+1. **Independent processing loops**: Each queue has its own `processLoop()` async loop
+2. **Task isolation**: Each queue only processes its own jobs
+3. **Independent concurrency**: Each queue has its own concurrency limit
+4. **Blocking isolation**: Slow jobs in one queue do not affect others
 
 ---
 
-## 📝 注意事项
+## 📋 Changelog
 
-- **持久化适配器**：生产环境必须使用持久化适配器（Redis、Memcached、RabbitMQ 或
-  MongoDB）
-- **内存适配器**：仅用于开发和测试，应用重启后任务会丢失
-- **Memcached 注意**：服务重启后数据会丢失，如需真正持久化请使用 Redis 或
-  MongoDB
-- **并发控制**：每个队列独立的并发控制，互不影响
-- **任务重试**：任务失败后会自动重试，直到达到最大重试次数
-- **任务超时**：任务执行超时后会被标记为失败
-- **定时任务**：使用 UTC 时区，支持 5 字段和 6 字段 Cron 表达式
+**v1.0.0** (2026-02-07) - First stable release with multi-queue support, adapters (Redis, MongoDB, RabbitMQ, Memcached, Memory), cron jobs, and service container integration.
+
+See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
 ---
 
-## 🤝 贡献
+## 📊 Test Report
 
-欢迎提交 Issue 和 Pull Request！
+| Item       | Result      |
+| ---------- | ----------- |
+| Total tests| 100         |
+| Passed     | 100 ✅      |
+| Failed     | 0           |
+| Pass rate  | 100%        |
+| Test date  | 2026-01-30  |
+
+See [TEST_REPORT.md](./TEST_REPORT.md) for details.
 
 ---
 
-## 📄 许可证
+## 📝 Notes
 
-MIT License - 详见 [LICENSE.md](./LICENSE.md)
+- **Persistent adapter**: Production must use a persistent adapter (Redis, Memcached, RabbitMQ, or MongoDB)
+- **Memory adapter**: Dev/test only; jobs are lost on app restart
+- **Memcached**: Data lost on service restart; use Redis or MongoDB for true persistence
+- **Concurrency**: Each queue has independent concurrency control
+- **Retry**: Jobs retry automatically until max attempts
+- **Timeout**: Jobs are marked failed on execution timeout
+- **Cron**: Uses UTC; supports 5-field and 6-field Cron expressions
+
+---
+
+## 🤝 Contributing
+
+Issues and Pull Requests welcome!
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE.md](./LICENSE.md)
 
 ---
 

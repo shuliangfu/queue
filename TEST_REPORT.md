@@ -1,327 +1,327 @@
-# @dreamer/queue 测试报告
+# @dreamer/queue Test Report
 
-## 测试概览
+## Test Overview
 
-- **测试库版本**: @dreamer/test@^1.0.0-beta.39
-- **运行时适配器版本**: @dreamer/runtime-adapter@^1.0.0-beta.22
-- **服务容器版本**: @dreamer/service@^1.0.0-beta.4
-- **测试框架**: @dreamer/test (兼容 Deno 和 Bun)
-- **测试时间**: 2026-01-30
-- **测试环境**:
+- **Test Library Version**: @dreamer/test@^1.0.0-beta.39
+- **Runtime Adapter Version**: @dreamer/runtime-adapter@^1.0.0-beta.22
+- **Service Container Version**: @dreamer/service@^1.0.0-beta.4
+- **Test Framework**: @dreamer/test (compatible with Deno and Bun)
+- **Test Date**: 2026-01-30
+- **Test Environment**:
   - Deno 2.6+
   - Bun 1.3.5
 
-## 测试结果
+## Test Results
 
-### 总体统计
+### Overall Statistics
 
-- **总测试数**: 100
-- **通过**: 100 ✅
-- **失败**: 0
-- **通过率**: 100% ✅
-- **测试执行时间**: ~90秒（Bun 环境）
+- **Total Tests**: 100
+- **Passed**: 100 ✅
+- **Failed**: 0
+- **Pass Rate**: 100% ✅
+- **Execution Time**: ~90s (Bun environment)
 
-### 测试文件统计
+### Test File Statistics
 
-| 测试文件                    | 测试数 | 状态        | 说明                                                     |
-| --------------------------- | ------ | ----------- | -------------------------------------------------------- |
-| `adapter-interface.test.ts` | 7      | ✅ 全部通过 | 适配器接口完整功能测试                                   |
-| `delay.test.ts`             | 4      | ✅ 全部通过 | 延迟任务功能测试                                         |
-| `mod.test.ts`               | 3      | ✅ 全部通过 | MemoryQueueAdapter 基础功能                              |
-| `memcached.test.ts`         | 9      | ✅ 全部通过 | Memcached 适配器完整测试                                 |
-| `mongodb.test.ts`           | 13     | ✅ 全部通过 | MongoDB 适配器完整测试（+4 聚合管道优化测试）            |
-| `performance.test.ts`       | 6      | ✅ 全部通过 | **新增** 性能优化测试                                    |
-| `priority.test.ts`          | 3      | ✅ 全部通过 | 任务优先级功能测试                                       |
-| `queue-manager.test.ts`     | 23     | ✅ 全部通过 | QueueManager 类完整功能（+12 ServiceContainer 集成测试） |
-| `queue.test.ts`             | 11     | ✅ 全部通过 | Queue 类完整功能                                         |
-| `rabbitmq.test.ts`          | 9      | ✅ 全部通过 | RabbitMQ 适配器完整测试                                  |
-| `redis.test.ts`             | 12     | ✅ 全部通过 | Redis 适配器完整测试（+3 MGET 批量获取优化测试）         |
+| Test File                    | Tests | Status       | Description                                                    |
+| ---------------------------- | ----- | ------------ | -------------------------------------------------------------- |
+| `adapter-interface.test.ts` | 7     | ✅ All pass  | Adapter interface full functionality tests                     |
+| `delay.test.ts`             | 4     | ✅ All pass  | Delayed job functionality tests                                |
+| `mod.test.ts`               | 3     | ✅ All pass  | MemoryQueueAdapter basic functionality                         |
+| `memcached.test.ts`         | 9     | ✅ All pass  | Memcached adapter full tests                                   |
+| `mongodb.test.ts`           | 13    | ✅ All pass  | MongoDB adapter full tests (+4 aggregation pipeline optimization) |
+| `performance.test.ts`       | 6     | ✅ All pass  | **New** Performance optimization tests                        |
+| `priority.test.ts`          | 3     | ✅ All pass  | Task priority functionality tests                              |
+| `queue-manager.test.ts`     | 23    | ✅ All pass  | QueueManager full functionality (+12 ServiceContainer integration) |
+| `queue.test.ts`             | 11    | ✅ All pass  | Queue class full functionality                                 |
+| `rabbitmq.test.ts`          | 9     | ✅ All pass  | RabbitMQ adapter full tests                                    |
+| `redis.test.ts`             | 12    | ✅ All pass  | Redis adapter full tests (+3 MGET batch optimization tests)    |
 
-## 功能测试详情
+## Functional Test Details
 
-### 1. 适配器接口完整功能 (adapter-interface.test.ts) - 7 个测试
+### 1. Adapter Interface (adapter-interface.test.ts) - 7 tests
 
-**测试场景**:
+**Test Scenarios**:
 
-- ✅ MemoryQueueAdapter 接口方法
-  - `update(jobId, updates)` - 更新任务状态
-  - `remove(jobId)` - 删除任务
-  - `getAll(queueName)` - 获取队列中的所有任务
-  - `clear(queueName)` - 清空队列
-  - `getStats(queueName)` - 获取队列统计信息
-  - 处理不存在的任务
-  - 处理空队列的统计信息
+- ✅ MemoryQueueAdapter interface methods
+  - `update(jobId, updates)` - Update job status
+  - `remove(jobId)` - Remove job
+  - `getAll(queueName)` - Get all jobs in queue
+  - `clear(queueName)` - Clear queue
+  - `getStats(queueName)` - Get queue statistics
+  - Handle non-existent job
+  - Handle stats for empty queue
 
-**测试结果**: 7 个测试全部通过
+**Result**: 7/7 tests passed
 
-**实现特点**:
+**Implementation Highlights**:
 
-- ✅ 所有适配器接口方法都有完整测试
-- ✅ 边界情况处理（不存在的任务、空队列）
-- ✅ 统计信息准确性验证
+- ✅ All adapter interface methods have full test coverage
+- ✅ Edge case handling (non-existent job, empty queue)
+- ✅ Statistics accuracy verification
 
-### 2. 延迟任务功能 (delay.test.ts) - 4 个测试
+### 2. Delayed Jobs (delay.test.ts) - 4 tests
 
-**测试场景**:
+**Test Scenarios**:
 
-- ✅ 延迟任务处理
-  - 应该延迟执行任务
-  - 应该在延迟时间到达前不处理任务
-  - 应该处理多个延迟任务
-  - 应该处理无延迟的任务（delay = 0 或未设置）
+- ✅ Delayed job handling
+  - Should execute job after delay
+  - Should not process job before delay expires
+  - Should handle multiple delayed jobs
+  - Should handle no-delay jobs (delay = 0 or unset)
 
-**测试结果**: 4 个测试全部通过
+**Result**: 4/4 tests passed
 
-**实现特点**:
+**Implementation Highlights**:
 
-- ✅ 延迟任务在指定时间后才被处理
-- ✅ 多个延迟任务按时间顺序处理
-- ✅ 无延迟任务立即处理
+- ✅ Delayed jobs processed only after specified time
+- ✅ Multiple delayed jobs processed in time order
+- ✅ No-delay jobs processed immediately
 
-### 3. MemoryQueueAdapter 基础功能 (mod.test.ts) - 3 个测试
+### 3. MemoryQueueAdapter Basics (mod.test.ts) - 3 tests
 
-**测试场景**:
+**Test Scenarios**:
 
-- ✅ 应该创建内存队列适配器
-- ✅ 应该添加和获取任务
-- ✅ 应该处理任务
+- ✅ Should create memory queue adapter
+- ✅ Should add and get jobs
+- ✅ Should process jobs
 
-**测试结果**: 3 个测试全部通过
+**Result**: 3/3 tests passed
 
-**实现特点**:
-
-- ✅ 内存适配器基础功能完整
-- ✅ 任务添加、获取、处理流程正常
-- ⚠️ **注意**：内存适配器仅用于开发和测试，不支持持久化
-
-### 4. Memcached 适配器 (memcached.test.ts) - 9 个测试
-
-**测试场景**:
-
-- ✅ 应该检查 Memcached 容器是否运行
-- ✅ 应该创建 Memcached 队列适配器
-- ✅ 应该使用 Memcached 适配器添加和获取任务
-- ✅ 应该使用 Memcached 适配器处理任务
-- ✅ 应该使用 Memcached 适配器更新任务状态
-- ✅ 应该使用 Memcached 适配器删除任务
-- ✅ 应该使用 Memcached 适配器获取所有任务
-- ✅ 应该使用 Memcached 适配器清空队列
-- ✅ 应该使用 Memcached 适配器获取队列统计信息
-
-**测试结果**: 9 个测试全部通过
-
-**实现特点**:
-
-- ✅ 完整的 Memcached 适配器功能测试
-- ✅ 所有适配器接口方法都有测试
-- ✅ 内存缓存存储验证
-- ✅ 高性能内存缓存特性支持
-- ✅ 支持批量获取优化（getMulti）
-
-### 5. MongoDB 适配器 (mongodb.test.ts) - 13 个测试
-
-**测试场景**:
-
-- ✅ 应该检查 MongoDB 连接
-- ✅ 应该创建 MongoDB 队列适配器
-- ✅ 应该使用 MongoDB 适配器添加和获取任务
-- ✅ 应该使用 MongoDB 适配器处理任务
-- ✅ 应该使用 MongoDB 适配器更新任务状态
-- ✅ 应该使用 MongoDB 适配器删除任务
-- ✅ 应该使用 MongoDB 适配器获取所有任务
-- ✅ 应该使用 MongoDB 适配器清空队列
-- ✅ 应该使用 MongoDB 适配器获取队列统计信息
-
-**测试结果**: 13 个测试全部通过
-
-**实现特点**:
-
-- ✅ 完整的 MongoDB 适配器功能测试
-- ✅ 所有适配器接口方法都有测试
-- ✅ 持久化存储验证
-- ✅ 文档数据库特性支持
-- ✅ **新增** MongoDB 聚合管道优化测试
-  - 大量任务场景（100个任务）性能验证
-  - 延迟任务聚合查询验证
-  - 原子操作（findOneAndUpdate）验证
-  - 空结果处理验证
-
-### 6. 优先级功能 (priority.test.ts) - 3 个测试
-
-**测试场景**:
-
-- ✅ 任务优先级
-  - 应该按优先级处理任务（高优先级优先）
-  - 应该支持所有优先级级别
-- ✅ 优先级排序
-  - 应该正确处理相同优先级的任务（按创建时间）
-
-**测试结果**: 3 个测试全部通过
-
-**实现特点**:
-
-- ✅ 支持 low、normal、high、urgent 四个优先级级别
-- ✅ 高优先级任务优先处理
-- ✅ 相同优先级任务按创建时间排序（FIFO）
-
-### 7. QueueManager 类功能 (queue-manager.test.ts) - 23 个测试
-
-**测试场景**:
-
-- ✅ 队列管理
-  - 应该获取已创建的队列
-  - 应该创建同名队列时返回已存在的队列
-  - 应该获取不存在的队列时返回 undefined
-- ✅ 定时任务（Cron）
-  - 应该创建定时任务并添加到队列
-  - 应该创建定时任务并执行处理器
-  - 应该移除定时任务
-- ✅ 自动恢复
-  - 应该自动恢复超时的处理中任务
-  - 应该支持禁用自动恢复
-- ✅ 管理器生命周期
-  - 应该关闭管理器并停止所有队列
-  - 应该关闭管理器并停止所有定时任务
-- ✅ 错误处理
-  - 应该在创建管理器时要求提供适配器
-- ✅ **ServiceContainer 集成**（新增）
-  - 应该能够设置和获取服务容器
-  - 应该在设置容器时自动注册到服务容器
-  - 应该支持通过 fromContainer 静态方法获取管理器
-  - 应该支持命名管理器
-  - 应该支持多个命名管理器
-  - 应该在获取不存在的管理器时抛出错误
-  - 默认名称应该是 default
-- ✅ **createQueueManager 工厂函数**（新增）
-  - 应该创建队列管理器
-  - 应该支持传入服务容器
-  - 应该支持命名管理器
-  - 应该在不传入容器时正常工作
-  - 应该支持链式调用
-
-**测试结果**: 23 个测试全部通过
-
-**实现特点**:
-
-- ✅ 队列管理功能完整
-- ✅ 定时任务（Cron）支持完整
-- ✅ 自动恢复机制验证
-- ✅ 生命周期管理正确
-- ✅ 错误处理完善
-- ✅ **ServiceContainer 集成**（新增）
-- ✅ **工厂函数支持**（新增）
-
-### 8. Queue 类完整功能 (queue.test.ts) - 11 个测试
-
-**测试场景**:
-
-- ✅ 任务查询方法
-  - 应该通过 ID 获取任务
-  - 应该获取队列中的所有任务
-  - 应该获取队列统计信息
-  - 应该清空队列
-- ✅ 队列控制方法
-  - 应该停止队列处理
-- ✅ 错误处理和重试
-  - 应该处理任务失败并重试
-  - 应该在达到最大重试次数后标记为失败
-- ✅ 任务超时
-  - 应该处理任务执行超时
-- ✅ 并发控制
-  - 应该限制并发处理数量
-- ✅ 边界情况
-  - 应该处理空队列的查询
-  - 应该处理无效的任务 ID
-
-**测试结果**: 11 个测试全部通过
-
-**实现特点**:
-
-- ✅ 所有 Queue 类公共方法都有测试
-- ✅ 错误处理和重试机制完整
-- ✅ 任务超时处理正确
-- ✅ 并发控制有效
-- ✅ 边界情况处理完善
-
-### 9. RabbitMQ 适配器 (rabbitmq.test.ts) - 9 个测试
-
-**测试场景**:
-
-- ✅ 应该检查 RabbitMQ 连接
-- ✅ 应该创建 RabbitMQ 队列适配器
-- ✅ 应该使用 RabbitMQ 适配器添加和获取任务
-- ✅ 应该使用 RabbitMQ 适配器处理任务
-- ✅ 应该使用 RabbitMQ 适配器更新任务状态
-- ✅ 应该使用 RabbitMQ 适配器删除任务
-- ✅ 应该使用 RabbitMQ 适配器获取所有任务
-- ✅ 应该使用 RabbitMQ 适配器清空队列
-- ✅ 应该使用 RabbitMQ 适配器获取队列统计信息
-
-**测试结果**: 9 个测试全部通过
-
-**实现特点**:
-
-- ✅ 完整的 RabbitMQ 适配器功能测试
-- ✅ 所有适配器接口方法都有测试
-- ✅ 持久化存储验证
-- ✅ 企业级消息队列特性支持
-
-### 10. Redis 适配器 (redis.test.ts) - 12 个测试
-
-**测试场景**:
-
-- ✅ 应该检查 Redis 容器是否运行
-- ✅ 应该创建 Redis 队列适配器
-- ✅ 应该使用 Redis 适配器添加和获取任务
-- ✅ 应该使用 Redis 适配器处理任务
-- ✅ 应该使用 Redis 适配器更新任务状态
-- ✅ 应该使用 Redis 适配器删除任务
-- ✅ 应该使用 Redis 适配器获取所有任务
-- ✅ 应该使用 Redis 适配器清空队列
-- ✅ 应该使用 Redis 适配器获取队列统计信息
-
-**测试结果**: 12 个测试全部通过
-
-**实现特点**:
-
-- ✅ 完整的 Redis 适配器功能测试
-- ✅ 所有适配器接口方法都有测试
-- ✅ 持久化存储验证
-- ✅ 高性能内存数据库特性支持
-- ✅ **新增** Redis MGET 批量获取优化测试
-  - 大量任务场景（100个任务）性能验证
-  - 部分键不存在的情况处理验证
-  - 单个任务回退逻辑验证
-
-### 11. 性能优化测试 (performance.test.ts) - 6 个测试
-
-**测试场景**:
-
-- ✅ 动态延迟轮询优化
-  - 应该在有任务时使用短延迟（0-10ms）
-  - 应该在无任务时递增延迟
-  - 应该在找到任务后重置延迟
-- ✅ 性能基准测试
-  - Memory 适配器 getAll() 性能测试（100个任务）
-  - Memory 适配器 getNext() 性能测试（100个任务）
-  - 动态延迟对吞吐量的影响
-
-**测试结果**: 6 个测试全部通过
-
-**实现特点**:
-
-- ✅ 验证动态延迟机制的正确性
-- ✅ 验证性能优化的实际效果
-- ✅ 建立性能基准，防止性能回归
-- ✅ 验证吞吐量提升
-
-## 适配器对比测试
-
-### 适配器功能完整性
-
-所有适配器都实现了完整的 QueueAdapter 接口，测试覆盖：
-
-| 功能         | Memory | Redis | Memcached | MongoDB | RabbitMQ |
+**Implementation Highlights**:
+
+- ✅ Memory adapter basic functionality complete
+- ✅ Job add, get, process flow works correctly
+- ⚠️ **Note**: Memory adapter is for dev/test only, no persistence
+
+### 4. Memcached Adapter (memcached.test.ts) - 9 tests
+
+**Test Scenarios**:
+
+- ✅ Should check if Memcached container is running
+- ✅ Should create Memcached queue adapter
+- ✅ Should add and get jobs with Memcached adapter
+- ✅ Should process jobs with Memcached adapter
+- ✅ Should update job status with Memcached adapter
+- ✅ Should remove jobs with Memcached adapter
+- ✅ Should get all jobs with Memcached adapter
+- ✅ Should clear queue with Memcached adapter
+- ✅ Should get queue stats with Memcached adapter
+
+**Result**: 9/9 tests passed
+
+**Implementation Highlights**:
+
+- ✅ Full Memcached adapter functionality tests
+- ✅ All adapter interface methods tested
+- ✅ In-memory cache storage verification
+- ✅ High-performance in-memory cache support
+- ✅ Batch get optimization (getMulti) support
+
+### 5. MongoDB Adapter (mongodb.test.ts) - 13 tests
+
+**Test Scenarios**:
+
+- ✅ Should check MongoDB connection
+- ✅ Should create MongoDB queue adapter
+- ✅ Should add and get jobs with MongoDB adapter
+- ✅ Should process jobs with MongoDB adapter
+- ✅ Should update job status with MongoDB adapter
+- ✅ Should remove jobs with MongoDB adapter
+- ✅ Should get all jobs with MongoDB adapter
+- ✅ Should clear queue with MongoDB adapter
+- ✅ Should get queue stats with MongoDB adapter
+
+**Result**: 13/13 tests passed
+
+**Implementation Highlights**:
+
+- ✅ Full MongoDB adapter functionality tests
+- ✅ All adapter interface methods tested
+- ✅ Persistence storage verification
+- ✅ Document database feature support
+- ✅ **New** MongoDB aggregation pipeline optimization tests
+  - Large job scenario (100 jobs) performance verification
+  - Delayed job aggregation query verification
+  - Atomic operation (findOneAndUpdate) verification
+  - Empty result handling verification
+
+### 6. Priority (priority.test.ts) - 3 tests
+
+**Test Scenarios**:
+
+- ✅ Task priority
+  - Should process tasks by priority (higher first)
+  - Should support all priority levels
+- ✅ Priority ordering
+  - Should handle same-priority tasks correctly (by creation time)
+
+**Result**: 3/3 tests passed
+
+**Implementation Highlights**:
+
+- ✅ Four priority levels: low, normal, high, urgent
+- ✅ Higher priority tasks processed first
+- ✅ Same-priority tasks ordered by creation time (FIFO)
+
+### 7. QueueManager (queue-manager.test.ts) - 23 tests
+
+**Test Scenarios**:
+
+- ✅ Queue management
+  - Should get created queue
+  - Should return existing queue when creating same name
+  - Should return undefined when getting non-existent queue
+- ✅ Cron jobs
+  - Should create cron job and add to queue
+  - Should create cron job and run handler
+  - Should remove cron job
+- ✅ Auto recovery
+  - Should auto-recover timed-out processing jobs
+  - Should support disabling auto recovery
+- ✅ Manager lifecycle
+  - Should close manager and stop all queues
+  - Should close manager and stop all cron jobs
+- ✅ Error handling
+  - Should require adapter when creating manager
+- ✅ **ServiceContainer integration** (new)
+  - Should set and get service container
+  - Should auto-register to container when set
+  - Should support fromContainer static method
+  - Should support named managers
+  - Should support multiple named managers
+  - Should throw when getting non-existent manager
+  - Default name should be default
+- ✅ **createQueueManager factory** (new)
+  - Should create queue manager
+  - Should support passing service container
+  - Should support named manager
+  - Should work without container
+  - Should support chaining
+
+**Result**: 23/23 tests passed
+
+**Implementation Highlights**:
+
+- ✅ Full queue management functionality
+- ✅ Complete cron job support
+- ✅ Auto recovery mechanism verification
+- ✅ Lifecycle management correct
+- ✅ Error handling complete
+- ✅ **ServiceContainer integration** (new)
+- ✅ **Factory function support** (new)
+
+### 8. Queue Class (queue.test.ts) - 11 tests
+
+**Test Scenarios**:
+
+- ✅ Job query methods
+  - Should get job by ID
+  - Should get all jobs in queue
+  - Should get queue statistics
+  - Should clear queue
+- ✅ Queue control methods
+  - Should stop queue processing
+- ✅ Error handling and retry
+  - Should handle job failure and retry
+  - Should mark as failed after max retries
+- ✅ Job timeout
+  - Should handle job execution timeout
+- ✅ Concurrency control
+  - Should limit concurrent processing
+- ✅ Edge cases
+  - Should handle empty queue queries
+  - Should handle invalid job IDs
+
+**Result**: 11/11 tests passed
+
+**Implementation Highlights**:
+
+- ✅ All Queue class public methods tested
+- ✅ Complete error handling and retry mechanism
+- ✅ Job timeout handling correct
+- ✅ Concurrency control effective
+- ✅ Edge case handling complete
+
+### 9. RabbitMQ Adapter (rabbitmq.test.ts) - 9 tests
+
+**Test Scenarios**:
+
+- ✅ Should check RabbitMQ connection
+- ✅ Should create RabbitMQ queue adapter
+- ✅ Should add and get jobs with RabbitMQ adapter
+- ✅ Should process jobs with RabbitMQ adapter
+- ✅ Should update job status with RabbitMQ adapter
+- ✅ Should remove jobs with RabbitMQ adapter
+- ✅ Should get all jobs with RabbitMQ adapter
+- ✅ Should clear queue with RabbitMQ adapter
+- ✅ Should get queue stats with RabbitMQ adapter
+
+**Result**: 9/9 tests passed
+
+**Implementation Highlights**:
+
+- ✅ Full RabbitMQ adapter functionality tests
+- ✅ All adapter interface methods tested
+- ✅ Persistence storage verification
+- ✅ Enterprise message queue feature support
+
+### 10. Redis Adapter (redis.test.ts) - 12 tests
+
+**Test Scenarios**:
+
+- ✅ Should check if Redis container is running
+- ✅ Should create Redis queue adapter
+- ✅ Should add and get jobs with Redis adapter
+- ✅ Should process jobs with Redis adapter
+- ✅ Should update job status with Redis adapter
+- ✅ Should remove jobs with Redis adapter
+- ✅ Should get all jobs with Redis adapter
+- ✅ Should clear queue with Redis adapter
+- ✅ Should get queue stats with Redis adapter
+
+**Result**: 12/12 tests passed
+
+**Implementation Highlights**:
+
+- ✅ Full Redis adapter functionality tests
+- ✅ All adapter interface methods tested
+- ✅ Persistence storage verification
+- ✅ High-performance in-memory database feature support
+- ✅ **New** Redis MGET batch optimization tests
+  - Large job scenario (100 jobs) performance verification
+  - Partial keys missing handling verification
+  - Single job fallback logic verification
+
+### 11. Performance Optimization (performance.test.ts) - 6 tests
+
+**Test Scenarios**:
+
+- ✅ Dynamic delay polling optimization
+  - Should use short delay (0-10ms) when jobs exist
+  - Should increase delay when no jobs
+  - Should reset delay when job found
+- ✅ Performance benchmarks
+  - Memory adapter getAll() performance (100 jobs)
+  - Memory adapter getNext() performance (100 jobs)
+  - Dynamic delay impact on throughput
+
+**Result**: 6/6 tests passed
+
+**Implementation Highlights**:
+
+- ✅ Verify dynamic delay mechanism correctness
+- ✅ Verify performance optimization effectiveness
+- ✅ Establish performance baseline to prevent regression
+- ✅ Verify throughput improvement
+
+## Adapter Comparison
+
+### Adapter Feature Completeness
+
+All adapters implement the full QueueAdapter interface. Test coverage:
+
+| Feature      | Memory | Redis | Memcached | MongoDB | RabbitMQ |
 | ------------ | ------ | ----- | --------- | ------- | -------- |
 | `add()`      | ✅     | ✅    | ✅        | ✅      | ✅       |
 | `get()`      | ✅     | ✅    | ✅        | ✅      | ✅       |
@@ -332,229 +332,225 @@
 | `clear()`    | ✅     | ✅    | ✅        | ✅      | ✅       |
 | `getStats()` | ✅     | ✅    | ✅        | ✅      | ✅       |
 
-### 适配器特性对比
+### Adapter Comparison
 
-| 特性           | Memory    | Redis            | Memcached         | MongoDB  | RabbitMQ       |
+| Property       | Memory    | Redis            | Memcached         | MongoDB  | RabbitMQ       |
 | -------------- | --------- | ---------------- | ----------------- | -------- | -------------- |
-| **持久化**     | ❌        | ✅               | ⚠️*               | ✅       | ✅             |
-| **高性能**     | ✅        | ✅               | ✅                | ⚠️       | ⚠️             |
-| **分布式支持** | ❌        | ✅               | ✅                | ✅       | ✅             |
-| **复杂查询**   | ❌        | ❌               | ❌                | ✅       | ❌             |
-| **消息路由**   | ❌        | ❌               | ❌                | ❌       | ✅             |
-| **适用场景**   | 开发/测试 | 生产环境（推荐） | 单机/小规模分布式 | 生产环境 | 企业级生产环境 |
+| **Persistence**| ❌        | ✅               | ⚠️*               | ✅       | ✅             |
+| **Performance**| ✅        | ✅               | ✅                | ⚠️       | ⚠️             |
+| **Distributed**| ❌        | ✅               | ✅                | ✅       | ✅             |
+| **Complex queries** | ❌   | ❌               | ❌                | ✅       | ❌             |
+| **Message routing** | ❌   | ❌               | ❌                | ❌       | ✅             |
+| **Use Case**   | Dev/Test  | Production (recommended) | Single-node/small scale | Production | Enterprise production |
 
-*Memcached 是内存缓存系统，只要服务不重启数据不丢失，但服务重启后数据会丢失
+*Memcached is in-memory; data persists while service runs but is lost on restart
 
-## 高级功能测试
+## Advanced Feature Tests
 
-### 1. 任务优先级 ✅
+### 1. Task Priority ✅
 
-- ✅ 支持四个优先级级别：low、normal、high、urgent
-- ✅ 高优先级任务优先处理
-- ✅ 相同优先级任务按创建时间排序（FIFO）
-- ✅ 优先级队列的正确性验证
+- ✅ Four priority levels: low, normal, high, urgent
+- ✅ Higher priority tasks processed first
+- ✅ Same-priority tasks ordered by creation time (FIFO)
+- ✅ Priority queue correctness verification
 
-### 2. 延迟任务 ✅
+### 2. Delayed Jobs ✅
 
-- ✅ 延迟任务的添加
-- ✅ 延迟任务在延迟时间到达前不处理
-- ✅ 延迟任务在延迟时间到达后正常处理
-- ✅ 无延迟任务的立即处理
-- ✅ 多个延迟任务按时间顺序处理
+- ✅ Add delayed jobs
+- ✅ Delayed jobs not processed before delay
+- ✅ Delayed jobs processed correctly after delay
+- ✅ No-delay jobs processed immediately
+- ✅ Multiple delayed jobs processed in time order
 
-### 3. 并发控制 ✅
+### 3. Concurrency Control ✅
 
-- ✅ 并发数限制（concurrency 选项）
-- ✅ 多个任务同时处理时的并发控制
-- ✅ 并发数达到上限时的等待机制
+- ✅ Concurrency limit (concurrency option)
+- ✅ Concurrency control when multiple jobs process
+- ✅ Wait when concurrency limit reached
 
-### 4. 任务重试 ✅
+### 4. Job Retry ✅
 
-- ✅ 任务处理失败时的重试机制
-- ✅ 达到最大重试次数后的失败处理
-- ✅ 任务处理异常的错误处理
+- ✅ Retry on job failure
+- ✅ Failure handling after max retries
+- ✅ Error handling for job exceptions
 
-### 5. 任务超时 ✅
+### 5. Job Timeout ✅
 
-- ✅ 任务执行超时的处理
-- ✅ 超时任务的自动失败标记
+- ✅ Job execution timeout handling
+- ✅ Auto mark timed-out jobs as failed
 
-### 6. 自动恢复 ✅
+### 6. Auto Recovery ✅
 
-- ✅ 超时任务的自动恢复
-- ✅ 支持禁用自动恢复
-- ✅ 可配置恢复超时时间
+- ✅ Auto recover timed-out jobs
+- ✅ Support disabling auto recovery
+- ✅ Configurable recovery timeout
 
-### 7. 定时任务（Cron） ✅
+### 7. Cron Jobs ✅
 
-- ✅ 创建定时任务并添加到队列
-- ✅ 定时任务的执行
-- ✅ 定时任务的数据传递
-- ✅ 定时任务的队列名称指定
-- ✅ 移除定时任务
+- ✅ Create cron job and add to queue
+- ✅ Cron job execution
+- ✅ Cron job data passing
+- ✅ Cron job queue name specification
+- ✅ Remove cron job
 
-## 错误处理和边界情况
+## Error Handling and Edge Cases
 
-### 错误处理 ✅
+### Error Handling ✅
 
-- ✅ 任务处理失败
-- ✅ 达到最大重试次数
-- ✅ 任务执行超时
-- ✅ 适配器连接错误时的处理
-- ✅ 创建管理器时要求提供适配器
+- ✅ Job processing failure
+- ✅ Max retries reached
+- ✅ Job execution timeout
+- ✅ Adapter connection error handling
+- ✅ Require adapter when creating manager
 
-### 边界情况 ✅
+### Edge Cases ✅
 
-- ✅ 空队列处理
-- ✅ 无效任务 ID
-- ✅ 不存在的任务操作
-- ✅ 空队列的统计信息
+- ✅ Empty queue handling
+- ✅ Invalid job ID
+- ✅ Non-existent job operations
+- ✅ Empty queue statistics
 
-## 测试覆盖统计
+## Test Coverage Statistics
 
-| 类别                    | 已测试    | 覆盖率          |
-| ----------------------- | --------- | --------------- |
-| **适配器基础功能**      | 4/4       | 100% ✅         |
-| **Queue 类方法**        | 8/8       | 100% ✅         |
-| **QueueManager 类方法** | 5/5       | 100% ✅         |
-| **适配器接口方法**      | 5/5       | 100% ✅         |
-| **高级功能**            | 7/7       | 100% ✅         |
-| **错误处理**            | 5/5       | 100% ✅         |
-| **边界情况**            | 4/4       | 100% ✅         |
-| **性能优化**            | 13/13     | 100% ✅ ⭐ 新增 |
-| **总计**                | **50/50** | **100%** ✅     |
+| Category                 | Covered   | Coverage         |
+| ------------------------ | --------- | ---------------- |
+| **Adapter basics**       | 4/4       | 100% ✅          |
+| **Queue class methods**  | 8/8       | 100% ✅          |
+| **QueueManager methods** | 5/5       | 100% ✅          |
+| **Adapter interface**    | 5/5       | 100% ✅          |
+| **Advanced features**    | 7/7       | 100% ✅          |
+| **Error handling**       | 5/5       | 100% ✅          |
+| **Edge cases**           | 4/4       | 100% ✅          |
+| **Performance optimization** | 13/13 | 100% ✅ ⭐ New   |
+| **Total**                | **50/50** | **100%** ✅     |
 
-## 测试环境要求
+## Test Environment Requirements
 
-### 必需服务
+### Required Services
 
-- **Redis**: 用于 Redis 适配器测试（默认：localhost:6379）
-- **Memcached**: 用于 Memcached 适配器测试（默认：localhost:11211）
-- **MongoDB**: 用于 MongoDB 适配器测试（默认：mongodb://localhost:27017）
-- **RabbitMQ**: 用于 RabbitMQ
-  适配器测试（默认：amqp://guest:guest@localhost:5672/）
+- **Redis**: For Redis adapter tests (default: localhost:6379)
+- **Memcached**: For Memcached adapter tests (default: localhost:11211)
+- **MongoDB**: For MongoDB adapter tests (default: mongodb://localhost:27017)
+- **RabbitMQ**: For RabbitMQ adapter tests (default: amqp://guest:guest@localhost:5672/)
 
-### 测试配置
+### Test Configuration
 
-测试会自动检测服务是否可用，如果服务不可用，相关测试会被跳过。
+Tests auto-detect service availability; tests are skipped if services are unavailable.
 
-## 性能测试
+## Performance Tests
 
-### 测试执行时间
+### Execution Time
 
-- **总执行时间**: ~83秒（Bun 环境）
-- **最快测试**: adapter-interface.test.ts (0ms)
-- **最慢测试**: redis.test.ts (~3秒，包含连接和操作)
-- **性能优化测试**: performance.test.ts (~5秒)
+- **Total**: ~83s (Bun environment)
+- **Fastest**: adapter-interface.test.ts (0ms)
+- **Slowest**: redis.test.ts (~3s, includes connection and operations)
+- **Performance tests**: performance.test.ts (~5s)
 
-### 性能特点
+### Performance Characteristics
 
-- ✅ 内存适配器：极快（<1ms）
-- ✅ Redis 适配器：快速（~5-6秒，包含连接）
-- ✅ Memcached 适配器：快速（~5-6秒，包含连接）
-- ✅ MongoDB 适配器：中等（~2-3秒，包含连接）
-- ✅ RabbitMQ 适配器：中等（~2-3秒，包含连接）
+- ✅ Memory adapter: Very fast (<1ms)
+- ✅ Redis adapter: Fast (~5-6s, includes connection)
+- ✅ Memcached adapter: Fast (~5-6s, includes connection)
+- ✅ MongoDB adapter: Medium (~2-3s, includes connection)
+- ✅ RabbitMQ adapter: Medium (~2-3s, includes connection)
 
-## 测试质量评估
+## Test Quality Assessment
 
-### ✅ 优点
+### ✅ Strengths
 
-1. **全面覆盖**：所有核心功能、高级功能、错误处理、边界情况和性能优化都有测试
-2. **适配器完整**：所有适配器（Memory、Redis、Memcached、MongoDB、RabbitMQ）都有完整测试
-3. **真实场景**：测试覆盖实际使用场景
-4. **错误处理**：完善的错误处理和边界情况测试
-5. **跨运行时**：兼容 Deno 和 Bun 运行时
-6. **性能验证**：✅ **新增** 所有性能优化都有完整测试覆盖
-7. **性能基准**：✅ **新增** 建立了性能基准，防止性能回归
+1. **Comprehensive coverage**: All core features, advanced features, error handling, edge cases, and performance optimizations tested
+2. **Adapter completeness**: All adapters (Memory, Redis, Memcached, MongoDB, RabbitMQ) fully tested
+3. **Real scenarios**: Tests cover actual use cases
+4. **Error handling**: Complete error handling and edge case tests
+5. **Cross-runtime**: Compatible with Deno and Bun
+6. **Performance verification**: ✅ **New** All performance optimizations have full test coverage
+7. **Performance baseline**: ✅ **New** Baseline established to prevent regression
 
-## 性能优化测试覆盖 ⭐ 新增
+## Performance Optimization Test Coverage ⭐ New
 
-### Redis MGET 批量获取测试（3个测试）
+### Redis MGET Batch Get Tests (3 tests)
 
-1. **应该使用 MGET 批量获取大量任务（100个任务）**
-   - ✅ 验证 MGET 批量获取在大量任务场景下的正确性
-   - ✅ 验证性能（应该在 200ms 内完成）
-   - ✅ 验证所有任务都能正确获取
+1. **Should use MGET for batch get of many jobs (100 jobs)**
+   - ✅ Verify MGET correctness in large job scenario
+   - ✅ Verify performance (should complete within 200ms)
+   - ✅ Verify all jobs retrieved correctly
 
-2. **应该处理 MGET 返回部分 null 的情况**
-   - ✅ 验证批量获取能正确处理部分键不存在的情况
-   - ✅ 验证只返回存在的任务
+2. **Should handle MGET returning partial nulls**
+   - ✅ Verify batch get handles partial keys missing
+   - ✅ Verify only existing jobs returned
 
-3. **应该在单个任务时回退到单个获取**
-   - ✅ 验证回退逻辑的正确性
-   - ✅ 验证单个任务场景下的功能正常
+3. **Should fallback to single get for one job**
+   - ✅ Verify fallback logic correctness
+   - ✅ Verify single job scenario works
 
-### MongoDB 聚合管道测试（4个测试）
+### MongoDB Aggregation Pipeline Tests (4 tests)
 
-1. **应该使用聚合管道获取最高优先级任务（100个任务）**
-   - ✅ 验证聚合管道在大量任务场景下的正确性
-   - ✅ 验证优先级排序的正确性
-   - ✅ 验证性能（应该在 200ms 内完成）
+1. **Should use aggregation pipeline for highest priority job (100 jobs)**
+   - ✅ Verify aggregation pipeline correctness in large job scenario
+   - ✅ Verify priority ordering correctness
+   - ✅ Verify performance (should complete within 200ms)
 
-2. **应该正确处理延迟任务的聚合查询**
-   - ✅ 验证聚合管道能正确过滤延迟未到的任务
-   - ✅ 验证延迟到期后能正确获取任务
+2. **Should correctly handle delayed job aggregation query**
+   - ✅ Verify aggregation pipeline filters delayed jobs
+   - ✅ Verify correct retrieval after delay expires
 
-3. **应该使用 findOneAndUpdate 原子操作**
-   - ✅ 验证并发场景下不会返回同一个任务
-   - ✅ 验证原子操作的正确性
+3. **Should use findOneAndUpdate atomic operation**
+   - ✅ Verify no duplicate job return in concurrent scenario
+   - ✅ Verify atomic operation correctness
 
-4. **应该在聚合管道返回空结果时返回 null**
-   - ✅ 验证没有可用任务时返回 null
-   - ✅ 验证边界情况处理
+4. **Should return null when aggregation pipeline returns empty**
+   - ✅ Verify null when no available jobs
+   - ✅ Verify edge case handling
 
-### 动态延迟轮询测试（3个测试）
+### Dynamic Delay Polling Tests (3 tests)
 
-1. **应该在有任务时使用短延迟（0-10ms）**
-   - ✅ 验证有任务时延迟机制
-   - ✅ 验证任务能快速处理
+1. **Should use short delay (0-10ms) when jobs exist**
+   - ✅ Verify delay mechanism with jobs
+   - ✅ Verify fast job processing
 
-2. **应该在无任务时递增延迟**
-   - ✅ 验证延迟递增机制
-   - ✅ 验证空轮询时的延迟调整
+2. **Should increase delay when no jobs**
+   - ✅ Verify delay increase mechanism
+   - ✅ Verify delay adjustment during empty polling
 
-3. **应该在找到任务后重置延迟**
-   - ✅ 验证延迟重置机制
-   - ✅ 验证连续任务处理的性能
+3. **Should reset delay when job found**
+   - ✅ Verify delay reset mechanism
+   - ✅ Verify continuous job processing performance
 
-### 性能基准测试（3个测试）
+### Performance Benchmark Tests (3 tests)
 
-1. **Memory 适配器 getAll() 性能测试（100个任务）**
-   - ✅ 建立 getAll() 性能基准
-   - ✅ 验证内存操作性能（< 50ms）
+1. **Memory adapter getAll() performance (100 jobs)**
+   - ✅ Establish getAll() performance baseline
+   - ✅ Verify memory operation performance (< 50ms)
 
-2. **Memory 适配器 getNext() 性能测试（100个任务）**
-   - ✅ 建立 getNext() 性能基准
-   - ✅ 验证内存操作性能（< 50ms）
+2. **Memory adapter getNext() performance (100 jobs)**
+   - ✅ Establish getNext() performance baseline
+   - ✅ Verify memory operation performance (< 50ms)
 
-3. **动态延迟对吞吐量的影响**
-   - ✅ 验证动态延迟对整体吞吐量的影响
-   - ✅ 验证并发处理性能
+3. **Dynamic delay impact on throughput**
+   - ✅ Verify dynamic delay impact on throughput
+   - ✅ Verify concurrent processing performance
 
-**性能优化测试覆盖率**: **100%** ✅
-
----
-
-## 结论
-
-**队列库测试已经全面覆盖！** ✅
-
-所有核心功能、高级功能、错误处理、边界情况和性能优化都已通过测试验证。测试覆盖率达到
-**100%**，包括：
-
-1. ✅ 所有公共 API 方法
-2. ✅ 所有适配器实现（Memory、Redis、Memcached、MongoDB、RabbitMQ）
-3. ✅ 所有高级功能（优先级、延迟、并发、重试、超时、自动恢复、定时任务）
-4. ✅ 所有错误处理场景
-5. ✅ 所有边界情况
-6. ✅ **所有性能优化**（Redis MGET 批量获取、MongoDB 聚合管道、动态延迟轮询）
-
-测试代码质量高，覆盖全面，可以确保代码的可靠性和稳定性。所有测试在 Deno 和 Bun
-环境下都能正常运行。
+**Performance optimization test coverage**: **100%** ✅
 
 ---
 
-**测试报告生成时间**: 2026-01-30 **测试框架**: @dreamer/test@^1.0.0-beta.39
-**运行时适配器**: @dreamer/runtime-adapter@^1.0.0-beta.22 **服务容器**:
-@dreamer/service@^1.0.0-beta.4 **测试总数**: 100（+12 ServiceContainer
-集成测试）
+## Conclusion
+
+**Queue library testing is comprehensive!** ✅
+
+All core features, advanced features, error handling, edge cases, and performance optimizations have been verified. Test coverage is **100%**, including:
+
+1. ✅ All public API methods
+2. ✅ All adapter implementations (Memory, Redis, Memcached, MongoDB, RabbitMQ)
+3. ✅ All advanced features (priority, delay, concurrency, retry, timeout, auto recovery, cron)
+4. ✅ All error handling scenarios
+5. ✅ All edge cases
+6. ✅ **All performance optimizations** (Redis MGET batch get, MongoDB aggregation pipeline, dynamic delay polling)
+
+The test suite is high quality and comprehensive, ensuring reliability and stability. All tests run correctly in both Deno and Bun environments.
+
+---
+
+**Report generated**: 2026-01-30 **Test Framework**: @dreamer/test@^1.0.0-beta.39
+**Runtime Adapter**: @dreamer/runtime-adapter@^1.0.0-beta.22 **Service Container**:
+@dreamer/service@^1.0.0-beta.4 **Total Tests**: 100 (+12 ServiceContainer integration tests)
