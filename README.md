@@ -1,18 +1,20 @@
 # @dreamer/queue
 
-> A queue and task scheduling library compatible with Deno and Bun, providing task queues, scheduling, concurrency control, and more
+> A queue and task scheduling library compatible with Deno and Bun, providing
+> task queues, scheduling, concurrency control, and more
 
-English | [中文 (Chinese)](./README-zh.md)
+English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-100%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-100%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
 
 ---
 
 ## 🎯 Features
 
-Queue and task scheduling library for async task processing, cron jobs, batch processing, and more.
+Queue and task scheduling library for async task processing, cron jobs, batch
+processing, and more.
 
 ---
 
@@ -26,12 +28,12 @@ deno add jsr:@dreamer/queue
 
 ## 🌍 Environment Compatibility
 
-| Environment | Support | Notes                           |
-| ----------- | ------- | ------------------------------- |
-| Deno        | ✅      | Deno 2.6+                       |
-| Bun         | ✅      | Bun 1.3.5+                      |
-| Server      | ✅      | Compatible with Deno and Bun    |
-| Client      | ❌      | Browser cannot run task queues  |
+| Environment | Support | Notes                          |
+| ----------- | ------- | ------------------------------ |
+| Deno        | ✅      | Deno 2.6+                      |
+| Bun         | ✅      | Bun 1.3.5+                     |
+| Server      | ✅      | Compatible with Deno and Bun   |
+| Client      | ❌      | Browser cannot run task queues |
 
 **Dependencies**:
 
@@ -40,7 +42,8 @@ deno add jsr:@dreamer/queue
 - **RabbitMQ adapter**: Requires `npm:amqplib`
 - **MongoDB adapter**: Requires `npm:mongodb`
 - **Memory adapter**: No extra dependencies, dev/test only
-- **Service container**: `jsr:@dreamer/service` (optional, for dependency injection)
+- **Service container**: `jsr:@dreamer/service` (optional, for dependency
+  injection)
 
 ---
 
@@ -73,7 +76,8 @@ deno add jsr:@dreamer/queue
   - **RabbitMQ adapter**: RabbitMQ persistence (enterprise)
   - **MongoDB adapter**: MongoDB persistence
   - **Memory adapter**: Dev/test only
-- **Service container integration**: Supports dependency injection and service container
+- **Service container integration**: Supports dependency injection and service
+  container
 
 ---
 
@@ -91,7 +95,8 @@ deno add jsr:@dreamer/queue
 
 ### Create Queue Manager
 
-**⚠️ Important**: Production must use a persistent adapter (Redis, Memcached, RabbitMQ, or MongoDB).
+**⚠️ Important**: Production must use a persistent adapter (Redis, Memcached,
+RabbitMQ, or MongoDB).
 
 #### Using Redis Adapter (Recommended)
 
@@ -168,26 +173,26 @@ queueManager.unschedule("daily-report");
 
 Create a queue manager.
 
-| Parameter     | Type          | Default | Description                        |
-| -------------- | ------------- | ------- | ---------------------------------- |
-| adapter        | QueueAdapter  | -       | Queue adapter (required)           |
-| autoRecover    | boolean       | true    | Auto recover incomplete jobs       |
-| recoverTimeout | number        | 30000   | Timeout for recovery (ms)          |
-| name           | string        | default | Manager name (for service container) |
+| Parameter      | Type         | Default | Description                          |
+| -------------- | ------------ | ------- | ------------------------------------ |
+| adapter        | QueueAdapter | -       | Queue adapter (required)             |
+| autoRecover    | boolean      | true    | Auto recover incomplete jobs         |
+| recoverTimeout | number       | 30000   | Timeout for recovery (ms)            |
+| name           | string       | default | Manager name (for service container) |
 
 #### Methods
 
-| Method                                  | Returns           | Description       |
-| --------------------------------------- | ----------------- | ----------------- |
-| `createQueue(name, options?)`           | Queue             | Create queue      |
-| `getQueue(name)`                        | Queue \| undefined | Get queue         |
-| `schedule(name, cron, handler, opts?)`   | void              | Add cron job      |
-| `unschedule(name)`                      | void              | Remove cron job   |
-| `close()`                               | Promise\<void\>   | Close manager     |
-| `getName()`                             | string            | Get manager name  |
-| `setContainer(container)`               | this              | Set service container |
-| `getContainer()`                        | ServiceContainer  | Get service container |
-| `static fromContainer(container, name)` | QueueManager      | Get manager from container |
+| Method                                  | Returns            | Description                |
+| --------------------------------------- | ------------------ | -------------------------- |
+| `createQueue(name, options?)`           | Queue              | Create queue               |
+| `getQueue(name)`                        | Queue \| undefined | Get queue                  |
+| `schedule(name, cron, handler, opts?)`  | void               | Add cron job               |
+| `unschedule(name)`                      | void               | Remove cron job            |
+| `close()`                               | Promise\<void\>    | Close manager              |
+| `getName()`                             | string             | Get manager name           |
+| `setContainer(container)`               | this               | Set service container      |
+| `getContainer()`                        | ServiceContainer   | Get service container      |
+| `static fromContainer(container, name)` | QueueManager       | Get manager from container |
 
 ### Queue
 
@@ -199,21 +204,21 @@ Add job to queue.
 | ----------- | ----------- | --------------------------------- |
 | name        | string      | Job name                          |
 | data        | JobData     | Job data                          |
-| priority    | JobPriority | Priority (low/normal/high/urgent)  |
+| priority    | JobPriority | Priority (low/normal/high/urgent) |
 | delay       | number      | Delay before execution (ms)       |
 | maxAttempts | number      | Max retry count                   |
 | timeout     | number      | Timeout (ms)                      |
 
 #### Methods
 
-| Method                 | Returns           | Description     |
-| ---------------------- | ----------------- | --------------- |
-| `process(processor)`   | void              | Process jobs    |
-| `getJob(jobId)`        | Promise\<Job\>    | Get job         |
-| `getJobs()`            | Promise\<Job[]\>  | Get all jobs    |
-| `getStats()`           | Promise\<Stats\>  | Get statistics  |
-| `clear()`              | Promise\<void\>   | Clear queue     |
-| `stop()`               | void              | Stop processing |
+| Method               | Returns          | Description     |
+| -------------------- | ---------------- | --------------- |
+| `process(processor)` | void             | Process jobs    |
+| `getJob(jobId)`      | Promise\<Job\>   | Get job         |
+| `getJobs()`          | Promise\<Job[]\> | Get all jobs    |
+| `getStats()`         | Promise\<Stats\> | Get statistics  |
+| `clear()`            | Promise\<void\>  | Clear queue     |
+| `stop()`             | void             | Stop processing |
 
 ### createQueueManager Factory
 
@@ -299,19 +304,20 @@ const adapter = new MemcachedQueueAdapter({
 
 Cron jobs use UTC. Supports standard Cron expressions:
 
-| Expression    | Description       |
-| ------------- | ----------------- |
-| `* * * * *`   | Every minute      |
-| `0 * * * *`   | Every hour        |
-| `0 0 * * *`   | Daily             |
-| `*/5 * * * *` | Every 5 minutes    |
+| Expression       | Description      |
+| ---------------- | ---------------- |
+| `* * * * *`      | Every minute     |
+| `0 * * * *`      | Every hour       |
+| `0 0 * * *`      | Daily            |
+| `*/5 * * * *`    | Every 5 minutes  |
 | `*/30 * * * * *` | Every 30 seconds |
 
 ### Multi-Queue Isolation
 
 The library supports multiple independent queue instances, each fully isolated:
 
-1. **Independent processing loops**: Each queue has its own `processLoop()` async loop
+1. **Independent processing loops**: Each queue has its own `processLoop()`
+   async loop
 2. **Task isolation**: Each queue only processes its own jobs
 3. **Independent concurrency**: Each queue has its own concurrency limit
 4. **Blocking isolation**: Slow jobs in one queue do not affect others
@@ -320,31 +326,35 @@ The library supports multiple independent queue instances, each fully isolated:
 
 ## 📋 Changelog
 
-**v1.0.0** (2026-02-07) - First stable release with multi-queue support, adapters (Redis, MongoDB, RabbitMQ, Memcached, Memory), cron jobs, and service container integration.
+**v1.0.1** (2026-02-19) - Docs restructure (`docs/en-US`, `docs/zh-CN`), full
+Chinese TEST_REPORT, test report updated to 113 tests, i18n for adapter and
+manager error messages (en-US, zh-CN).
 
-See [CHANGELOG.md](./CHANGELOG.md) for full details.
+See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full details.
 
 ---
 
 ## 📊 Test Report
 
-| Item       | Result      |
-| ---------- | ----------- |
-| Total tests| 100         |
-| Passed     | 100 ✅      |
-| Failed     | 0           |
-| Pass rate  | 100%        |
-| Test date  | 2026-01-30  |
+| Item        | Result     |
+| ----------- | ---------- |
+| Total tests | 113        |
+| Passed      | 113 ✅     |
+| Failed      | 0          |
+| Pass rate   | 100%       |
+| Test date   | 2026-02-19 |
 
-See [TEST_REPORT.md](./TEST_REPORT.md) for details.
+See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md) for details.
 
 ---
 
 ## 📝 Notes
 
-- **Persistent adapter**: Production must use a persistent adapter (Redis, Memcached, RabbitMQ, or MongoDB)
+- **Persistent adapter**: Production must use a persistent adapter (Redis,
+  Memcached, RabbitMQ, or MongoDB)
 - **Memory adapter**: Dev/test only; jobs are lost on app restart
-- **Memcached**: Data lost on service restart; use Redis or MongoDB for true persistence
+- **Memcached**: Data lost on service restart; use Redis or MongoDB for true
+  persistence
 - **Concurrency**: Each queue has independent concurrency control
 - **Retry**: Jobs retry automatically until max attempts
 - **Timeout**: Jobs are marked failed on execution timeout

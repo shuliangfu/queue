@@ -22,6 +22,8 @@ import type { ServiceContainer } from "@dreamer/service";
 
 // 导入 runtime-adapter 的 cron API
 import { cron, type CronHandle, IS_DENO } from "@dreamer/runtime-adapter";
+// 包内 i18n，用于错误文案
+import { $tr } from "./i18n.ts";
 // 导入类型供当前文件使用
 import type { MemcachedConnectionConfig } from "./adapters/memcached.ts";
 import type { MongoDBConnectionConfig } from "./adapters/mongodb.ts";
@@ -562,13 +564,7 @@ export class QueueManager {
 
   constructor(options: QueueManagerOptions | QueueManagerOptionsExtended) {
     if (!options.adapter) {
-      throw new Error(
-        "必须提供队列适配器！请使用 RedisQueueAdapter 或 RabbitMQQueueAdapter 实现持久化。\n" +
-          "示例：\n" +
-          "  import { QueueManager, RedisQueueAdapter } from 'jsr:@dreamer/queue';\n" +
-          "  const adapter = new RedisQueueAdapter({ client: redisClient });\n" +
-          "  const queueManager = new QueueManager({ adapter });",
-      );
+      throw new Error($tr("errors.adapterRequired"));
     }
     this.adapter = options.adapter;
     this.autoRecover = options.autoRecover ?? true;

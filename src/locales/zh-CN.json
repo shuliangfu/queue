@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "adapterRequired": "必须提供队列适配器！请使用 RedisQueueAdapter 或 RabbitMQQueueAdapter 实现持久化。\n示例：\n  import { QueueManager, RedisQueueAdapter } from 'jsr:@dreamer/queue';\n  const adapter = new RedisQueueAdapter({ client: redisClient });\n  const queueManager = new QueueManager({ adapter });",
+    "mongodbConfigRequired": "MongoDBQueueAdapter 需要提供 connection 配置或 client 实例",
+    "mongodbConnectFailed": "无法创建 MongoDB 连接: {message}",
+    "mongodbNotConnected": "MongoDB 客户端未连接，请先调用 connect()",
+    "redisConfigRequired": "RedisQueueAdapter 需要提供 connection 配置或 client 实例",
+    "redisConnectFailed": "无法创建 Redis 连接: {message}",
+    "redisNotConnected": "Redis 客户端未连接，请先调用 connect()",
+    "rabbitmqConfigRequired": "RabbitMQQueueAdapter 需要提供 connection 配置或 connectionObject 实例",
+    "rabbitmqConnectFailed": "无法创建 RabbitMQ 连接: {message}",
+    "rabbitmqNotConnected": "RabbitMQ 连接未建立，请先调用 connect()",
+    "memcachedConfigRequired": "MemcachedQueueAdapter 需要提供 connection 配置或 client 实例",
+    "memcachedConnectFailed": "无法创建 Memcached 连接: {message}",
+    "memcachedNotConnected": "Memcached 客户端未连接，请先调用 connect()"
+  }
+}

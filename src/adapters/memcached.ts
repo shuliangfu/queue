@@ -8,6 +8,7 @@
  */
 
 import type { Job, JobPriority, QueueAdapter } from "./base.ts";
+import { $tr } from "../i18n.ts";
 
 /**
  * Memcached 连接配置
@@ -101,9 +102,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
       this.client = options.client;
       this.keyPrefix = options.keyPrefix || "queue";
     } else {
-      throw new Error(
-        "MemcachedQueueAdapter 需要提供 connection 配置或 client 实例",
-      );
+      throw new Error($tr("errors.memcachedConfigRequired"));
     }
   }
 
@@ -201,11 +200,8 @@ export class MemcachedQueueAdapter implements QueueAdapter {
           },
         };
       } catch (error) {
-        throw new Error(
-          `无法创建 Memcached 连接: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error($tr("errors.memcachedConnectFailed", { message }));
       }
     }
   }
@@ -276,7 +272,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
 
   async add(job: Job): Promise<void> {
     if (!this.client) {
-      throw new Error("Memcached 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.memcachedNotConnected"));
     }
 
     // 存储任务数据（不过期，因为 Memcached 会一直保存直到服务重启）
@@ -300,7 +296,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
 
   async getNext(queueName: string): Promise<Job | null> {
     if (!this.client) {
-      throw new Error("Memcached 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.memcachedNotConnected"));
     }
 
     const queueKey = this.getQueueKey(queueName);
@@ -398,7 +394,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
 
   async update(jobId: string, updates: Partial<Job>): Promise<void> {
     if (!this.client) {
-      throw new Error("Memcached 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.memcachedNotConnected"));
     }
 
     const jobKey = this.getJobKey(jobId);
@@ -412,7 +408,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
 
   async get(jobId: string): Promise<Job | null> {
     if (!this.client) {
-      throw new Error("Memcached 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.memcachedNotConnected"));
     }
 
     const jobKey = this.getJobKey(jobId);
@@ -423,7 +419,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
 
   async remove(jobId: string): Promise<void> {
     if (!this.client) {
-      throw new Error("Memcached 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.memcachedNotConnected"));
     }
 
     // 删除任务数据
@@ -443,7 +439,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
 
   async getAll(queueName: string): Promise<Job[]> {
     if (!this.client) {
-      throw new Error("Memcached 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.memcachedNotConnected"));
     }
 
     const queueKey = this.getQueueKey(queueName);
@@ -487,7 +483,7 @@ export class MemcachedQueueAdapter implements QueueAdapter {
 
   async clear(queueName: string): Promise<void> {
     if (!this.client) {
-      throw new Error("Memcached 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.memcachedNotConnected"));
     }
 
     const queueKey = this.getQueueKey(queueName);

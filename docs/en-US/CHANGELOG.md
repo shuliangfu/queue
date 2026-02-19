@@ -1,9 +1,31 @@
 # Changelog
 
+English | [中文 (Chinese)](../zh-CN/CHANGELOG.md)
+
 All notable changes to @dreamer/queue are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [1.0.1] - 2026-02-19
+
+### Added
+
+- **Docs**: Restructure documentation into `docs/en-US` and `docs/zh-CN`; move
+  CHANGELOG, TEST_REPORT, and Chinese README under docs with language switcher
+  links.
+- **Docs**: Full Chinese translation of TEST_REPORT (no content reduction).
+- **i18n**: Adapter and manager error messages localized (en-US, zh-CN); `$tr`,
+  `setQueueLocale`, locale auto-detect from env; `@dreamer/i18n` dependency.
+
+### Changed
+
+- **Test report**: Updated overall statistics to 113 tests (including lifecycle
+  hooks), execution time ~2m54s (Deno); per-file counts aligned with `deno test`
+  output.
 
 ---
 

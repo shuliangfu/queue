@@ -1,12 +1,14 @@
 # @dreamer/queue Test Report
 
+English | [中文 (Chinese)](../zh-CN/TEST_REPORT.md)
+
 ## Test Overview
 
 - **Test Library Version**: @dreamer/test@^1.0.0-beta.39
 - **Runtime Adapter Version**: @dreamer/runtime-adapter@^1.0.0-beta.22
 - **Service Container Version**: @dreamer/service@^1.0.0-beta.4
 - **Test Framework**: @dreamer/test (compatible with Deno and Bun)
-- **Test Date**: 2026-01-30
+- **Test Date**: 2026-01-30 (last run: 2026-02-19)
 - **Test Environment**:
   - Deno 2.6+
   - Bun 1.3.5
@@ -15,27 +17,27 @@
 
 ### Overall Statistics
 
-- **Total Tests**: 100
-- **Passed**: 100 ✅
+- **Total Tests**: 113
+- **Passed**: 113 ✅
 - **Failed**: 0
 - **Pass Rate**: 100% ✅
-- **Execution Time**: ~90s (Bun environment)
+- **Execution Time**: ~2m54s (last run: Deno environment)
 
 ### Test File Statistics
 
-| Test File                    | Tests | Status       | Description                                                    |
-| ---------------------------- | ----- | ------------ | -------------------------------------------------------------- |
-| `adapter-interface.test.ts` | 7     | ✅ All pass  | Adapter interface full functionality tests                     |
-| `delay.test.ts`             | 4     | ✅ All pass  | Delayed job functionality tests                                |
-| `mod.test.ts`               | 3     | ✅ All pass  | MemoryQueueAdapter basic functionality                         |
-| `memcached.test.ts`         | 9     | ✅ All pass  | Memcached adapter full tests                                   |
-| `mongodb.test.ts`           | 13    | ✅ All pass  | MongoDB adapter full tests (+4 aggregation pipeline optimization) |
-| `performance.test.ts`       | 6     | ✅ All pass  | **New** Performance optimization tests                        |
-| `priority.test.ts`          | 3     | ✅ All pass  | Task priority functionality tests                              |
-| `queue-manager.test.ts`     | 23    | ✅ All pass  | QueueManager full functionality (+12 ServiceContainer integration) |
-| `queue.test.ts`             | 11    | ✅ All pass  | Queue class full functionality                                 |
-| `rabbitmq.test.ts`          | 9     | ✅ All pass  | RabbitMQ adapter full tests                                    |
-| `redis.test.ts`             | 12    | ✅ All pass  | Redis adapter full tests (+3 MGET batch optimization tests)    |
+| Test File                   | Tests | Status      | Description                                                        |
+| --------------------------- | ----- | ----------- | ------------------------------------------------------------------ |
+| `adapter-interface.test.ts` | 8     | ✅ All pass | Adapter interface full functionality tests                         |
+| `delay.test.ts`             | 5     | ✅ All pass | Delayed job functionality tests                                    |
+| `mod.test.ts`               | 4     | ✅ All pass | MemoryQueueAdapter basic functionality                             |
+| `memcached.test.ts`         | 10    | ✅ All pass | Memcached adapter full tests                                       |
+| `mongodb.test.ts`           | 15    | ✅ All pass | MongoDB adapter full tests (+4 aggregation pipeline + afterAll)    |
+| `performance.test.ts`       | 7     | ✅ All pass | Performance optimization tests                                     |
+| `priority.test.ts`          | 4     | ✅ All pass | Task priority functionality tests                                  |
+| `queue-manager.test.ts`     | 24    | ✅ All pass | QueueManager full functionality (+12 ServiceContainer integration) |
+| `queue.test.ts`             | 12    | ✅ All pass | Queue class full functionality                                     |
+| `rabbitmq.test.ts`          | 11    | ✅ All pass | RabbitMQ adapter full tests (+ afterAll)                           |
+| `redis.test.ts`             | 13    | ✅ All pass | Redis adapter full tests (+3 MGET batch optimization tests)        |
 
 ## Functional Test Details
 
@@ -334,14 +336,14 @@ All adapters implement the full QueueAdapter interface. Test coverage:
 
 ### Adapter Comparison
 
-| Property       | Memory    | Redis            | Memcached         | MongoDB  | RabbitMQ       |
-| -------------- | --------- | ---------------- | ----------------- | -------- | -------------- |
-| **Persistence**| ❌        | ✅               | ⚠️*               | ✅       | ✅             |
-| **Performance**| ✅        | ✅               | ✅                | ⚠️       | ⚠️             |
-| **Distributed**| ❌        | ✅               | ✅                | ✅       | ✅             |
-| **Complex queries** | ❌   | ❌               | ❌                | ✅       | ❌             |
-| **Message routing** | ❌   | ❌               | ❌                | ❌       | ✅             |
-| **Use Case**   | Dev/Test  | Production (recommended) | Single-node/small scale | Production | Enterprise production |
+| Property            | Memory   | Redis                    | Memcached               | MongoDB    | RabbitMQ              |
+| ------------------- | -------- | ------------------------ | ----------------------- | ---------- | --------------------- |
+| **Persistence**     | ❌       | ✅                       | ⚠️*                     | ✅         | ✅                    |
+| **Performance**     | ✅       | ✅                       | ✅                      | ⚠️         | ⚠️                    |
+| **Distributed**     | ❌       | ✅                       | ✅                      | ✅         | ✅                    |
+| **Complex queries** | ❌       | ❌                       | ❌                      | ✅         | ❌                    |
+| **Message routing** | ❌       | ❌                       | ❌                      | ❌         | ✅                    |
+| **Use Case**        | Dev/Test | Production (recommended) | Single-node/small scale | Production | Enterprise production |
 
 *Memcached is in-memory; data persists while service runs but is lost on restart
 
@@ -412,17 +414,17 @@ All adapters implement the full QueueAdapter interface. Test coverage:
 
 ## Test Coverage Statistics
 
-| Category                 | Covered   | Coverage         |
-| ------------------------ | --------- | ---------------- |
-| **Adapter basics**       | 4/4       | 100% ✅          |
-| **Queue class methods**  | 8/8       | 100% ✅          |
-| **QueueManager methods** | 5/5       | 100% ✅          |
-| **Adapter interface**    | 5/5       | 100% ✅          |
-| **Advanced features**    | 7/7       | 100% ✅          |
-| **Error handling**       | 5/5       | 100% ✅          |
-| **Edge cases**           | 4/4       | 100% ✅          |
-| **Performance optimization** | 13/13 | 100% ✅ ⭐ New   |
-| **Total**                | **50/50** | **100%** ✅     |
+| Category                     | Covered   | Coverage       |
+| ---------------------------- | --------- | -------------- |
+| **Adapter basics**           | 4/4       | 100% ✅        |
+| **Queue class methods**      | 8/8       | 100% ✅        |
+| **QueueManager methods**     | 5/5       | 100% ✅        |
+| **Adapter interface**        | 5/5       | 100% ✅        |
+| **Advanced features**        | 7/7       | 100% ✅        |
+| **Error handling**           | 5/5       | 100% ✅        |
+| **Edge cases**               | 4/4       | 100% ✅        |
+| **Performance optimization** | 13/13     | 100% ✅ ⭐ New |
+| **Total**                    | **50/50** | **100%** ✅    |
 
 ## Test Environment Requirements
 
@@ -431,19 +433,21 @@ All adapters implement the full QueueAdapter interface. Test coverage:
 - **Redis**: For Redis adapter tests (default: localhost:6379)
 - **Memcached**: For Memcached adapter tests (default: localhost:11211)
 - **MongoDB**: For MongoDB adapter tests (default: mongodb://localhost:27017)
-- **RabbitMQ**: For RabbitMQ adapter tests (default: amqp://guest:guest@localhost:5672/)
+- **RabbitMQ**: For RabbitMQ adapter tests (default:
+  amqp://guest:guest@localhost:5672/)
 
 ### Test Configuration
 
-Tests auto-detect service availability; tests are skipped if services are unavailable.
+Tests auto-detect service availability; tests are skipped if services are
+unavailable.
 
 ## Performance Tests
 
 ### Execution Time
 
-- **Total**: ~83s (Bun environment)
+- **Total**: ~2m54s (last run: Deno environment)
 - **Fastest**: adapter-interface.test.ts (0ms)
-- **Slowest**: redis.test.ts (~3s, includes connection and operations)
+- **Slowest**: redis.test.ts (~6s, includes connection and operations)
 - **Performance tests**: performance.test.ts (~5s)
 
 ### Performance Characteristics
@@ -458,13 +462,17 @@ Tests auto-detect service availability; tests are skipped if services are unavai
 
 ### ✅ Strengths
 
-1. **Comprehensive coverage**: All core features, advanced features, error handling, edge cases, and performance optimizations tested
-2. **Adapter completeness**: All adapters (Memory, Redis, Memcached, MongoDB, RabbitMQ) fully tested
+1. **Comprehensive coverage**: All core features, advanced features, error
+   handling, edge cases, and performance optimizations tested
+2. **Adapter completeness**: All adapters (Memory, Redis, Memcached, MongoDB,
+   RabbitMQ) fully tested
 3. **Real scenarios**: Tests cover actual use cases
 4. **Error handling**: Complete error handling and edge case tests
 5. **Cross-runtime**: Compatible with Deno and Bun
-6. **Performance verification**: ✅ **New** All performance optimizations have full test coverage
-7. **Performance baseline**: ✅ **New** Baseline established to prevent regression
+6. **Performance verification**: ✅ **New** All performance optimizations have
+   full test coverage
+7. **Performance baseline**: ✅ **New** Baseline established to prevent
+   regression
 
 ## Performance Optimization Test Coverage ⭐ New
 
@@ -538,19 +546,26 @@ Tests auto-detect service availability; tests are skipped if services are unavai
 
 **Queue library testing is comprehensive!** ✅
 
-All core features, advanced features, error handling, edge cases, and performance optimizations have been verified. Test coverage is **100%**, including:
+All core features, advanced features, error handling, edge cases, and
+performance optimizations have been verified. Test coverage is **100%**,
+including:
 
 1. ✅ All public API methods
 2. ✅ All adapter implementations (Memory, Redis, Memcached, MongoDB, RabbitMQ)
-3. ✅ All advanced features (priority, delay, concurrency, retry, timeout, auto recovery, cron)
+3. ✅ All advanced features (priority, delay, concurrency, retry, timeout, auto
+   recovery, cron)
 4. ✅ All error handling scenarios
 5. ✅ All edge cases
-6. ✅ **All performance optimizations** (Redis MGET batch get, MongoDB aggregation pipeline, dynamic delay polling)
+6. ✅ **All performance optimizations** (Redis MGET batch get, MongoDB
+   aggregation pipeline, dynamic delay polling)
 
-The test suite is high quality and comprehensive, ensuring reliability and stability. All tests run correctly in both Deno and Bun environments.
+The test suite is high quality and comprehensive, ensuring reliability and
+stability. All tests run correctly in both Deno and Bun environments.
 
 ---
 
-**Report generated**: 2026-01-30 **Test Framework**: @dreamer/test@^1.0.0-beta.39
-**Runtime Adapter**: @dreamer/runtime-adapter@^1.0.0-beta.22 **Service Container**:
-@dreamer/service@^1.0.0-beta.4 **Total Tests**: 100 (+12 ServiceContainer integration tests)
+**Report generated**: 2026-01-30 (last updated: 2026-02-19) **Test Framework**:
+@dreamer/test@^1.0.0-beta.39 **Runtime Adapter**:
+@dreamer/runtime-adapter@^1.0.0-beta.22 **Service Container**:
+@dreamer/service@^1.0.0-beta.4 **Total Tests**: 113 (includes 12
+ServiceContainer integration tests and lifecycle hooks)

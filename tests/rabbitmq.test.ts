@@ -27,9 +27,12 @@ describe("Queue > RabbitMQQueueAdapter", () => {
   beforeAll(async () => {
     const rabbitmqHost = getEnvWithDefault("RABBITMQ_HOST", "localhost");
     const rabbitmqPort = parseInt(getEnvWithDefault("RABBITMQ_PORT", "5672"));
-    // 默认使用 guest/guest（如果容器中没有 guest 用户，可以通过环境变量配置其他用户）
-    const rabbitmqUser = getEnvWithDefault("RABBITMQ_USER", "guest");
-    const rabbitmqPassword = getEnvWithDefault("RABBITMQ_PASSWORD", "guest");
+    // 与 /home/docker/docker-compose.yml 中 RabbitMQ 一致：RABBITMQ_DEFAULT_USER=admin, RABBITMQ_DEFAULT_PASS=admin8866231
+    const rabbitmqUser = getEnvWithDefault("RABBITMQ_USER", "admin");
+    const rabbitmqPassword = getEnvWithDefault(
+      "RABBITMQ_PASSWORD",
+      "admin8866231",
+    );
     const rabbitmqVhost = getEnvWithDefault("RABBITMQ_VHOST", "/");
 
     try {

@@ -1,9 +1,9 @@
 # @dreamer/queue
 
 > 一个兼容 Deno 和 Bun
-> 的队列和任务调度库，提供任务队列、任务调度、并发控制等功能
+> 的队列和任务调度包，提供任务队列、任务调度、并发控制等功能
 
-[English](./README.md) | 中文 (Chinese)
+[English](../../README.md) | 中文 (Chinese)
 
 [![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
@@ -13,7 +13,7 @@
 
 ## 🎯 功能
 
-队列和任务调度库，用于异步任务处理、定时任务、批量处理等。
+队列和任务调度包，用于异步任务处理、定时任务、批量处理等。
 
 ---
 
@@ -311,7 +311,7 @@ const adapter = new MemcachedQueueAdapter({
 
 ### 多队列隔离
 
-队列库支持多个独立的队列实例，每个队列完全隔离，互不阻塞：
+队列包支持多个独立的队列实例，每个队列完全隔离，互不阻塞：
 
 1. **独立的处理循环**：每个队列有独立的 `processLoop()` 异步循环
 2. **任务隔离**：每个队列只处理自己队列中的任务
@@ -322,9 +322,12 @@ const adapter = new MemcachedQueueAdapter({
 
 ## 📋 变更日志
 
-**v1.0.0** (2026-02-07) - 首个稳定版，支持多队列、多种适配器（Redis、MongoDB、RabbitMQ、Memcached、Memory）、定时任务及服务容器集成。
+**v1.0.1** (2026-02-19) -
+文档结构调整（`docs/en-US`、`docs/zh-CN`），TEST_REPORT
+完整中文版，测试报告更新为 113 项测试，适配器与管理器错误文案
+i18n（en-US、zh-CN）。
 
-详见 [CHANGELOG-zh.md](./CHANGELOG-zh.md)。
+详见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 
@@ -332,11 +335,11 @@ const adapter = new MemcachedQueueAdapter({
 
 | 项目     | 结果       |
 | -------- | ---------- |
-| 测试总数 | 100        |
-| 通过     | 100 ✅     |
+| 测试总数 | 113        |
+| 通过     | 113 ✅     |
 | 失败     | 0          |
 | 通过率   | 100%       |
-| 测试时间 | 2026-01-30 |
+| 测试时间 | 2026-02-19 |
 
 详细测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
 

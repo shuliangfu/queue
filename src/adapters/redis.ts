@@ -8,6 +8,7 @@
 
 import { createClient } from "redis";
 import type { Job, JobPriority, QueueAdapter } from "./base.ts";
+import { $tr } from "../i18n.ts";
 
 /**
  * Redis 连接配置
@@ -119,9 +120,7 @@ export class RedisQueueAdapter implements QueueAdapter {
       this.client = options.client;
       this.keyPrefix = options.keyPrefix || "queue";
     } else {
-      throw new Error(
-        "RedisQueueAdapter 需要提供 connection 配置或 client 实例",
-      );
+      throw new Error($tr("errors.redisConfigRequired"));
     }
   }
 
@@ -185,11 +184,8 @@ export class RedisQueueAdapter implements QueueAdapter {
           mGet: (keys: string[]) => this.internalClient.mGet(keys),
         };
       } catch (error) {
-        throw new Error(
-          `无法创建 Redis 连接: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error($tr("errors.redisConnectFailed", { message }));
       }
     }
   }
@@ -282,7 +278,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   async add(job: Job): Promise<void> {
     if (!this.client) {
-      throw new Error("Redis 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.redisNotConnected"));
     }
     // 存储任务数据
     const jobKey = this.getJobKey(job.id);
@@ -296,7 +292,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   async getNext(queueName: string): Promise<Job | null> {
     if (!this.client) {
-      throw new Error("Redis 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.redisNotConnected"));
     }
     const queueKey = this.getQueueKey(queueName);
     const length = await this.client.llen(queueKey);
@@ -408,7 +404,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   async update(jobId: string, updates: Partial<Job>): Promise<void> {
     if (!this.client) {
-      throw new Error("Redis 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.redisNotConnected"));
     }
     const jobKey = this.getJobKey(jobId);
     const jobData = await this.client.get(jobKey);
@@ -421,7 +417,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   async get(jobId: string): Promise<Job | null> {
     if (!this.client) {
-      throw new Error("Redis 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.redisNotConnected"));
     }
     const jobKey = this.getJobKey(jobId);
     const jobData = await this.client.get(jobKey);
@@ -431,7 +427,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   async remove(jobId: string): Promise<void> {
     if (!this.client) {
-      throw new Error("Redis 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.redisNotConnected"));
     }
     // 删除任务数据
     const jobKey = this.getJobKey(jobId);
@@ -461,7 +457,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   async getAll(queueName: string): Promise<Job[]> {
     if (!this.client) {
-      throw new Error("Redis 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.redisNotConnected"));
     }
     const queueKey = this.getQueueKey(queueName);
     const jobIds = await this.client.lrange(queueKey, 0, -1);
@@ -507,7 +503,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   async clear(queueName: string): Promise<void> {
     if (!this.client) {
-      throw new Error("Redis 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.redisNotConnected"));
     }
     const queueKey = this.getQueueKey(queueName);
     const jobIds = await this.client.lrange(queueKey, 0, -1);

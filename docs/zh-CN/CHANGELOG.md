@@ -1,9 +1,29 @@
 # 变更日志
 
+[English](../en-US/CHANGELOG.md) | 中文 (Chinese)
+
 本文档记录 @dreamer/queue 的所有重要变更。
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+
+---
+
+## [1.0.1] - 2026-02-19
+
+### 新增
+
+- **文档**：文档结构调整为 `docs/en-US` 与
+  `docs/zh-CN`；CHANGELOG、TEST_REPORT、中文 README 迁至 docs
+  下，并增加语言切换链接。
+- **文档**：TEST_REPORT 完整中文版（无删减）。
+- **i18n**：适配器与管理器错误文案国际化（en-US、zh-CN）；提供 `$tr`、
+  `setQueueLocale`，语言从环境变量自动检测；新增依赖 `@dreamer/i18n`。
+
+### 变更
+
+- **测试报告**：总体统计更新为 113 项测试（含生命周期钩子），执行时间约 2 分 54
+  秒（Deno）；各文件用例数与 `deno test` 输出一致。
 
 ---
 

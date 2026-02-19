@@ -8,6 +8,7 @@
 
 import amqp from "amqplib";
 import type { Job, QueueAdapter } from "./base.ts";
+import { $tr } from "../i18n.ts";
 
 /**
  * RabbitMQ 连接配置
@@ -154,9 +155,7 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         }
       });
     } else {
-      throw new Error(
-        "RabbitMQQueueAdapter 需要提供 connection 配置或 connectionObject 实例",
-      );
+      throw new Error($tr("errors.rabbitmqConfigRequired"));
     }
   }
 
@@ -288,11 +287,8 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
         // 初始化通道
         await this.init();
       } catch (error) {
-        throw new Error(
-          `无法创建 RabbitMQ 连接: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error($tr("errors.rabbitmqConnectFailed", { message }));
       }
     }
   }
@@ -325,7 +321,7 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
    */
   private async init(): Promise<void> {
     if (!this.connection) {
-      throw new Error("RabbitMQ 连接未建立，请先调用 connect()");
+      throw new Error($tr("errors.rabbitmqNotConnected"));
     }
     try {
       this.channel = await this.connection.createChannel();

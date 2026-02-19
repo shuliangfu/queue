@@ -8,6 +8,7 @@
 
 import { MongoClient } from "mongodb";
 import type { Job, JobPriority, QueueAdapter } from "./base.ts";
+import { $tr } from "../i18n.ts";
 
 /**
  * MongoDB 连接配置
@@ -171,9 +172,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
       this.collectionPrefix = options.collectionPrefix || "queues";
       this.databaseName = options.databaseName || "queue";
     } else {
-      throw new Error(
-        "MongoDBQueueAdapter 需要提供 connection 配置或 client 实例",
-      );
+      throw new Error($tr("errors.mongodbConfigRequired"));
     }
   }
 
@@ -217,11 +216,8 @@ export class MongoDBQueueAdapter implements QueueAdapter {
         // 创建索引以优化查询性能
         await this.createIndexes();
       } catch (error) {
-        throw new Error(
-          `无法创建 MongoDB 连接: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        );
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error($tr("errors.mongodbConnectFailed", { message }));
       }
     }
   }
@@ -257,7 +253,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
    */
   private getDatabase() {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     return this.client.db(this.databaseName);
   }
@@ -349,7 +345,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   async add(job: Job): Promise<void> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const queueName = this.getQueueName(job.id);
     const collection = this.getCollection();
@@ -364,7 +360,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   async getNext(queueName: string): Promise<Job | null> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const collection = this.getCollection();
 
@@ -481,7 +477,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   async update(jobId: string, updates: Partial<Job>): Promise<void> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const queueName = this.getQueueName(jobId);
     const collection = this.getCollection();
@@ -495,7 +491,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   async get(jobId: string): Promise<Job | null> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const queueName = this.getQueueName(jobId);
     const collection = this.getCollection();
@@ -512,7 +508,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   async remove(jobId: string): Promise<void> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const queueName = this.getQueueName(jobId);
     const collection = this.getCollection();
@@ -523,7 +519,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   async getAll(queueName: string): Promise<Job[]> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const collection = this.getCollection();
 
@@ -538,7 +534,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
 
   async clear(queueName: string): Promise<void> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const collection = this.getCollection();
 
@@ -553,7 +549,7 @@ export class MongoDBQueueAdapter implements QueueAdapter {
     failed: number;
   }> {
     if (!this.client) {
-      throw new Error("MongoDB 客户端未连接，请先调用 connect()");
+      throw new Error($tr("errors.mongodbNotConnected"));
     }
     const collection = this.getCollection();
 

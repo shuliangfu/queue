@@ -1,0 +1,17 @@
+{
+  "errors": {
+    "adapterRequired": "Queue adapter is required. Use RedisQueueAdapter or RabbitMQQueueAdapter for persistence.\nExample:\n  import { QueueManager, RedisQueueAdapter } from 'jsr:@dreamer/queue';\n  const adapter = new RedisQueueAdapter({ client: redisClient });\n  const queueManager = new QueueManager({ adapter });",
+    "mongodbConfigRequired": "MongoDBQueueAdapter requires either connection config or client instance.",
+    "mongodbConnectFailed": "Failed to create MongoDB connection: {message}",
+    "mongodbNotConnected": "MongoDB client is not connected. Call connect() first.",
+    "redisConfigRequired": "RedisQueueAdapter requires either connection config or client instance.",
+    "redisConnectFailed": "Failed to create Redis connection: {message}",
+    "redisNotConnected": "Redis client is not connected. Call connect() first.",
+    "rabbitmqConfigRequired": "RabbitMQQueueAdapter requires either connection config or connectionObject instance.",
+    "rabbitmqConnectFailed": "Failed to create RabbitMQ connection: {message}",
+    "rabbitmqNotConnected": "RabbitMQ connection is not established. Call connect() first.",
+    "memcachedConfigRequired": "MemcachedQueueAdapter requires either connection config or client instance.",
+    "memcachedConnectFailed": "Failed to create Memcached connection: {message}",
+    "memcachedNotConnected": "Memcached client is not connected. Call connect() first."
+  }
+}
