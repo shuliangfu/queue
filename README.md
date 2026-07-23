@@ -1,13 +1,13 @@
 # @dreamer/queue
 
-> A queue and task scheduling library compatible with Deno and Bun, providing
-> task queues, scheduling, concurrency control, and more
+> A queue and task scheduling library compatible with Deno, Bun and Node.js,
+> providing task queues, scheduling, concurrency control, and more
 
 English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-100%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-57%20passed%20(3%20runtimes)-brightgreen)](./docs/en-US/TEST_REPORT.md)
 
 ---
 
@@ -20,20 +20,40 @@ processing, and more.
 
 ## 📦 Installation
 
+### Deno
+
 ```bash
 deno add jsr:@dreamer/queue
 ```
+
+### Bun
+
+```bash
+bunx jsr add @dreamer/queue
+```
+
+### Node.js
+
+```bash
+npx jsr add @dreamer/queue
+```
+
+> Requires Node.js 22+. Uses Node 22+ global `fetch` / `crypto.subtle` /
+> `AbortController`. External adapters (Redis/MongoDB/RabbitMQ/Memcached)
+> dynamically `import()` their npm packages on `connect()`, so only install the
+> one you need (e.g. `npm install redis`).
 
 ---
 
 ## 🌍 Environment Compatibility
 
-| Environment | Support | Notes                          |
-| ----------- | ------- | ------------------------------ |
-| Deno        | ✅      | Deno 2.6+                      |
-| Bun         | ✅      | Bun 1.3.5+                     |
-| Server      | ✅      | Compatible with Deno and Bun   |
-| Client      | ❌      | Browser cannot run task queues |
+| Environment | Support | Notes                                       |
+| ----------- | ------- | ------------------------------------------- |
+| Deno        | ✅      | Deno 2.9+                                   |
+| Bun         | ✅      | Bun 1.3+                                    |
+| Node.js     | ✅      | Node.js 22+ (since v1.1.0)                  |
+| Server      | ✅      | Compatible with Deno, Bun and Node.js       |
+| Client      | ❌      | Browser cannot run task queues              |
 
 **Dependencies**:
 
@@ -326,6 +346,10 @@ The library supports multiple independent queue instances, each fully isolated:
 
 ## 📋 Changelog
 
+**v1.1.0** (2026-07-23) - Node.js 22+ compatibility; lazy npm imports in
+adapters (Redis/MongoDB/RabbitMQ); 9-job CI matrix (Deno/Bun/Node ×
+Linux/macOS/Windows); unit/integration test split; dependency upgrades.
+
 **v1.0.1** (2026-02-19) - Docs restructure (`docs/en-US`, `docs/zh-CN`), full
 Chinese TEST_REPORT, test report updated to 113 tests, i18n for adapter and
 manager error messages (en-US, zh-CN).
@@ -338,11 +362,12 @@ See [CHANGELOG.md](./docs/en-US/CHANGELOG.md) for full details.
 
 | Item        | Result     |
 | ----------- | ---------- |
-| Total tests | 113        |
-| Passed      | 113 ✅     |
+| Deno tests  | 64 ✅      |
+| Bun tests   | 57 ✅      |
+| Node tests  | 57 ✅      |
 | Failed      | 0          |
 | Pass rate   | 100%       |
-| Test date   | 2026-02-19 |
+| Test date   | 2026-07-23 |
 
 See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md) for details.
 

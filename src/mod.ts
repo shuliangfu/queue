@@ -258,7 +258,7 @@ export class Queue {
           // 并发达到上限时，使用短延迟等待
           await new Promise((resolve) => {
             const id = setTimeout(() => {
-              this.pendingTimeouts.delete(id as unknown as number);
+              this.pendingTimeouts.delete(id);
               resolve(undefined);
             }, 50) as unknown as number; // 并发满时使用 50ms 延迟
             this.pendingTimeouts.add(id);
@@ -299,7 +299,7 @@ export class Queue {
           const delay = this.getDynamicDelay();
           await new Promise((resolve) => {
             const id = setTimeout(() => {
-              this.pendingTimeouts.delete(id as unknown as number);
+              this.pendingTimeouts.delete(id);
               resolve(undefined);
             }, delay) as unknown as number;
             this.pendingTimeouts.add(id);
@@ -318,7 +318,7 @@ export class Queue {
           if (!this.running) break;
           await new Promise((resolve) => {
             const id = setTimeout(() => {
-              this.pendingTimeouts.delete(id as unknown as number);
+              this.pendingTimeouts.delete(id);
               resolve(undefined);
             }, delay) as unknown as number;
             this.pendingTimeouts.add(id);
@@ -350,7 +350,7 @@ export class Queue {
         const delay = this.getDynamicDelay();
         await new Promise((resolve) => {
           const id = setTimeout(() => {
-            this.pendingTimeouts.delete(id as unknown as number);
+            this.pendingTimeouts.delete(id);
             resolve(undefined);
           }, delay) as unknown as number;
           this.pendingTimeouts.add(id);

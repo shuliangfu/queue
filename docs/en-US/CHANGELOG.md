@@ -10,6 +10,46 @@ and this project adheres to
 
 ---
 
+## [1.1.0] - 2026-07-23
+
+### Added
+
+- **Node.js 22+ compatibility**: Full cross-runtime support (Deno, Bun, Node.js).
+  Unit tests pass on all three runtimes (57 tests each on Bun/Node, 64 on Deno).
+- **CI**: 9-job matrix (Deno/Bun/Node × Linux/macOS/Windows) running unit tests
+  on every push/PR to `dev`.
+- **Config**: `tsconfig.json`, `package.json` with `test:node` script
+  (`tsx --test --test-force-exit`), `engines.node >= 22`, `minimumDependencyAge`.
+- **Docs**: README (en + zh-CN) now documents Node.js 22+ installation and
+  compatibility.
+
+### Changed
+
+- **Lazy npm imports**: Redis, MongoDB, and RabbitMQ adapters now dynamically
+  `import()` their npm packages inside `connect()` instead of top-level static
+  imports. This prevents eager loading of `mongodb`→`bson` / `redis` /
+  `amqplib` when only `MemoryQueueAdapter` is used, fixing Bun module-load
+  failures and improving startup performance. (Memcached adapter already used
+  this pattern.)
+- **Test split**: Unit tests (MemoryQueueAdapter, no external services) are
+  separated from integration tests (memcached/mongodb/rabbitmq/redis, requiring
+  Docker services). CI runs unit tests only; `deno task test:integration` runs
+  the external-service tests locally.
+- **Dependencies**: Upgraded `@dreamer/i18n` ^1.1.2, `@dreamer/test` ^1.2.3,
+  `@dreamer/service` ^1.1.0, `@dreamer/runtime-adapter` ^1.2.2.
+- **npm install**: Uses `--force` flag to bypass `@redis/test-utils` 404 (a
+  non-existent devDependency of `@redis/client`; not needed at runtime).
+
+### Compatibility
+
+- Deno 2.9+
+- Bun 1.3+
+- Node.js 22+ (since v1.1.0)
+- Redis (for Redis adapter), Memcached (for Memcached adapter), MongoDB (for
+  MongoDB adapter), RabbitMQ (for RabbitMQ adapter)
+
+---
+
 ## [1.0.1] - 2026-02-19
 
 ### Added

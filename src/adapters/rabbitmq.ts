@@ -6,9 +6,8 @@
  * 使用 RabbitMQ 作为任务存储后端，支持任务持久化和故障恢复。
  */
 
-import amqp from "amqplib";
-import type { Job, QueueAdapter } from "./base.ts";
 import { $tr } from "../i18n.ts";
+import type { Job, QueueAdapter } from "./base.ts";
 
 /**
  * RabbitMQ 连接配置
@@ -179,10 +178,13 @@ export class RabbitMQQueueAdapter implements QueueAdapter {
             `amqp://${username}:${password}@${hostname}:${port}${vhost}`;
         }
 
+        // 动态导入 amqplib（npm 包），避免模块加载阶段拉入 amqplib 依赖
+        const amqp = (await import("amqplib")).default;
+
         // 尝试连接（先试 127.0.0.1，失败后试 localhost）
         let connection;
         try {
-          // amqplib 的 connect 方法（静态导入）
+          // amqplib 的 connect 方法（动态导入）
           connection = await amqp.connect(connectionUrl);
         } catch (error) {
           // 如果 127.0.0.1 失败，尝试 localhost

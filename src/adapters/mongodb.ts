@@ -6,9 +6,8 @@
  * 使用 MongoDB 作为任务存储后端，支持任务持久化和故障恢复。
  */
 
-import { MongoClient } from "mongodb";
-import type { Job, JobPriority, QueueAdapter } from "./base.ts";
 import { $tr } from "../i18n.ts";
+import type { Job, JobPriority, QueueAdapter } from "./base.ts";
 
 /**
  * MongoDB 连接配置
@@ -205,6 +204,9 @@ export class MongoDBQueueAdapter implements QueueAdapter {
         const clientOptions: any = {
           ...this.connectionConfig.options,
         };
+
+        // 动态导入 mongodb（npm 包），避免模块加载阶段拉入 mongodb 依赖
+        const { MongoClient } = await import("mongodb");
 
         // 创建并连接客户端
         this.internalClient = new MongoClient(connectionUrl, clientOptions);

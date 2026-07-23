@@ -4,40 +4,54 @@ English | [中文 (Chinese)](../zh-CN/TEST_REPORT.md)
 
 ## Test Overview
 
-- **Test Library Version**: @dreamer/test@^1.0.0-beta.39
-- **Runtime Adapter Version**: @dreamer/runtime-adapter@^1.0.0-beta.22
-- **Service Container Version**: @dreamer/service@^1.0.0-beta.4
-- **Test Framework**: @dreamer/test (compatible with Deno and Bun)
-- **Test Date**: 2026-01-30 (last run: 2026-02-19)
+- **Test Library Version**: @dreamer/test@^1.2.3
+- **Runtime Adapter Version**: @dreamer/runtime-adapter@^1.2.2
+- **Service Container Version**: @dreamer/service@^1.1.0
+- **i18n Version**: @dreamer/i18n@^1.1.2
+- **Test Framework**: @dreamer/test (compatible with Deno, Bun, and Node.js)
+- **Test Date**: 2026-07-23
 - **Test Environment**:
-  - Deno 2.6+
-  - Bun 1.3.5
+  - Deno 2.9+ (Linux/macOS/Windows)
+  - Bun 1.3+ (Linux/macOS/Windows)
+  - Node.js 22+ (Linux/macOS/Windows)
+
+> **Unit vs Integration**: Unit tests use `MemoryQueueAdapter` (no external
+> services) and run in CI on all three runtimes. Integration tests
+> (memcached/mongodb/rabbitmq/redis) require Docker services and run locally via
+> `deno task test:integration`.
 
 ## Test Results
 
 ### Overall Statistics
 
-- **Total Tests**: 113
-- **Passed**: 113 ✅
-- **Failed**: 0
-- **Pass Rate**: 100% ✅
-- **Execution Time**: ~2m54s (last run: Deno environment)
+| Runtime  | Total Tests | Passed | Failed | Pass Rate |
+| -------- | ----------- | ------ | ------ | --------- |
+| **Deno** | 64          | 64 ✅  | 0      | 100%      |
+| **Bun**  | 57          | 57 ✅  | 0      | 100%      |
+| **Node** | 57          | 57 ✅  | 0      | 100%      |
 
-### Test File Statistics
+- **Execution Time**: ~24s (Bun), ~10s (Node), ~29s (Deno)
+
+### Unit Test Files (CI)
 
 | Test File                   | Tests | Status      | Description                                                        |
 | --------------------------- | ----- | ----------- | ------------------------------------------------------------------ |
-| `adapter-interface.test.ts` | 8     | ✅ All pass | Adapter interface full functionality tests                         |
-| `delay.test.ts`             | 5     | ✅ All pass | Delayed job functionality tests                                    |
-| `mod.test.ts`               | 4     | ✅ All pass | MemoryQueueAdapter basic functionality                             |
-| `memcached.test.ts`         | 10    | ✅ All pass | Memcached adapter full tests                                       |
-| `mongodb.test.ts`           | 15    | ✅ All pass | MongoDB adapter full tests (+4 aggregation pipeline + afterAll)    |
-| `performance.test.ts`       | 7     | ✅ All pass | Performance optimization tests                                     |
-| `priority.test.ts`          | 4     | ✅ All pass | Task priority functionality tests                                  |
-| `queue-manager.test.ts`     | 24    | ✅ All pass | QueueManager full functionality (+12 ServiceContainer integration) |
-| `queue.test.ts`             | 12    | ✅ All pass | Queue class full functionality                                     |
-| `rabbitmq.test.ts`          | 11    | ✅ All pass | RabbitMQ adapter full tests (+ afterAll)                           |
-| `redis.test.ts`             | 13    | ✅ All pass | Redis adapter full tests (+3 MGET batch optimization tests)        |
+| `adapter-interface.test.ts` | 7     | ✅ All pass | Adapter interface full functionality tests                         |
+| `delay.test.ts`             | 4     | ✅ All pass | Delayed job functionality tests                                    |
+| `mod.test.ts`               | 3     | ✅ All pass | MemoryQueueAdapter basic functionality                             |
+| `performance.test.ts`       | 6     | ✅ All pass | Performance optimization tests                                     |
+| `priority.test.ts`          | 3     | ✅ All pass | Task priority functionality tests                                  |
+| `queue-manager.test.ts`     | 23    | ✅ All pass | QueueManager full functionality (+ServiceContainer integration)    |
+| `queue.test.ts`             | 11    | ✅ All pass | Queue class full functionality                                     |
+
+### Integration Test Files (local only, require Docker services)
+
+| Test File               | Tests | Description                                  |
+| ----------------------- | ----- | -------------------------------------------- |
+| `memcached.test.ts`     | 9     | Memcached adapter full tests                 |
+| `mongodb.test.ts`       | 13    | MongoDB adapter full tests                   |
+| `rabbitmq.test.ts`      | 9     | RabbitMQ adapter full tests                  |
+| `redis.test.ts`         | 12    | Redis adapter full tests                     |
 
 ## Functional Test Details
 

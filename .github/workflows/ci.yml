@@ -1,0 +1,171 @@
+# CI: 在 macOS、Ubuntu、Windows 上运行 Deno / Bun / Node 三端测试，验证跨运行时兼容性
+# 单元测试使用 MemoryQueueAdapter（无外部依赖）；集成测试（memcached/mongodb/rabbitmq/redis）
+# 需要外部服务，仅在本地通过 `deno task test:integration` 运行，不在 CI 中执行
+name: CI
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Deno 三平台测试（linux 同时负责 check / lint）
+  # ─────────────────────────────────────────────────────────────
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
+
+      - name: Cache dependencies
+        run: deno cache src/mod.ts 2>/dev/null || true
+
+      - name: Check
+        run: deno check src/
+
+      - name: Lint
+        run: deno lint src/
+
+      - name: Test (Deno, unit)
+        run: deno test -A --no-check tests/adapter-interface.test.ts tests/delay.test.ts tests/mod.test.ts tests/performance.test.ts tests/priority.test.ts tests/queue-manager.test.ts tests/queue.test.ts
+
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
+
+      - name: Cache dependencies
+        run: deno cache src/mod.ts 2>/dev/null || true
+
+      - name: Test (Deno, macOS, unit)
+        run: deno test -A --no-check tests/adapter-interface.test.ts tests/delay.test.ts tests/mod.test.ts tests/performance.test.ts tests/priority.test.ts tests/queue-manager.test.ts tests/queue.test.ts
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
+
+      - name: Cache dependencies
+        run: deno cache src/mod.ts
+
+      - name: Test (Deno, Windows, unit)
+        run: deno test -A --no-check tests/adapter-interface.test.ts tests/delay.test.ts tests/mod.test.ts tests/performance.test.ts tests/priority.test.ts tests/queue-manager.test.ts tests/queue.test.ts
+
+  # ─────────────────────────────────────────────────────────────
+  # Bun 三平台测试
+  # ─────────────────────────────────────────────────────────────
+  test-linux-bun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (Bun)
+        run: bun install
+
+      - name: Test (Bun, unit)
+        run: bun test tests/adapter-interface.test.ts tests/delay.test.ts tests/mod.test.ts tests/performance.test.ts tests/priority.test.ts tests/queue-manager.test.ts tests/queue.test.ts
+
+  test-macos-bun:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (Bun)
+        run: bun install
+
+      - name: Test (Bun, macOS, unit)
+        run: bun test tests/adapter-interface.test.ts tests/delay.test.ts tests/mod.test.ts tests/performance.test.ts tests/priority.test.ts tests/queue-manager.test.ts tests/queue.test.ts
+
+  test-windows-bun:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (Bun)
+        run: bun install
+
+      - name: Test (Bun, Windows, unit)
+        run: bun test tests/adapter-interface.test.ts tests/delay.test.ts tests/mod.test.ts tests/performance.test.ts tests/priority.test.ts tests/queue-manager.test.ts tests/queue.test.ts
+
+  # ─────────────────────────────────────────────────────────────
+  # Node.js 三平台测试
+  # test:node 脚本：tsx --tsconfig tsconfig.json --test --test-force-exit <unit files>
+  #   - tsx 作为 TypeScript loader，驱动 Node 原生 node:test runner
+  #   - Node 22+ 原生支持 glob 模式，Windows cmd.exe 不展开 * 亦无影响
+  #   - .npmrc 的 @jsr registry 别名让 npm install 解析 @dreamer/* 依赖
+  # ─────────────────────────────────────────────────────────────
+  test-linux-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (Node)
+        run: npm install --force
+
+      - name: Test (Node)
+        run: npm run test:node
+        timeout-minutes: 10
+
+  test-macos-node:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (Node)
+        run: npm install --force
+
+      - name: Test (Node, macOS)
+        run: npm run test:node
+        timeout-minutes: 10
+
+  test-windows-node:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (Node)
+        run: npm install --force
+
+      - name: Test (Node, Windows)
+        run: npm run test:node
+        timeout-minutes: 10

@@ -4,40 +4,53 @@
 
 ## 测试概览
 
-- **测试库版本**：@dreamer/test@^1.0.0-beta.39
-- **运行时适配器版本**：@dreamer/runtime-adapter@^1.0.0-beta.22
-- **服务容器版本**：@dreamer/service@^1.0.0-beta.4
-- **测试框架**：@dreamer/test（兼容 Deno 与 Bun）
-- **测试日期**：2026-01-30（本次执行：2026-02-19）
+- **测试库版本**：@dreamer/test@^1.2.3
+- **运行时适配器版本**：@dreamer/runtime-adapter@^1.2.2
+- **服务容器版本**：@dreamer/service@^1.1.0
+- **i18n 版本**：@dreamer/i18n@^1.1.2
+- **测试框架**：@dreamer/test（兼容 Deno、Bun 与 Node.js）
+- **测试日期**：2026-07-23
 - **测试环境**：
-  - Deno 2.6+
-  - Bun 1.3.5
+  - Deno 2.9+（Linux/macOS/Windows）
+  - Bun 1.3+（Linux/macOS/Windows）
+  - Node.js 22+（Linux/macOS/Windows）
+
+> **单元测试与集成测试**：单元测试使用 MemoryQueueAdapter（无外部依赖），
+> 在 CI 中三端运行。集成测试（memcached/mongodb/rabbitmq/redis）需要
+> Docker 服务，仅在本地通过 `deno task test:integration` 运行。
 
 ## 测试结果
 
 ### 总体统计
 
-- **测试总数**：113
-- **通过**：113 ✅
-- **失败**：0
-- **通过率**：100% ✅
-- **执行时间**：约 2 分 54 秒（本次执行：Deno 环境）
+| 运行时   | 测试总数 | 通过    | 失败 | 通过率 |
+| -------- | -------- | ------- | ---- | ------ |
+| **Deno** | 64       | 64 ✅   | 0    | 100%   |
+| **Bun**  | 57       | 57 ✅   | 0    | 100%   |
+| **Node** | 57       | 57 ✅   | 0    | 100%   |
 
-### 测试文件统计
+- **执行时间**：约 24 秒（Bun）、约 10 秒（Node）、约 29 秒（Deno）
 
-| 测试文件                    | 用例数 | 状态        | 说明                                                     |
-| --------------------------- | ------ | ----------- | -------------------------------------------------------- |
-| `adapter-interface.test.ts` | 8      | ✅ 全部通过 | 适配器接口完整功能测试                                   |
-| `delay.test.ts`             | 5      | ✅ 全部通过 | 延迟任务功能测试                                         |
-| `mod.test.ts`               | 4      | ✅ 全部通过 | MemoryQueueAdapter 基础功能                              |
-| `memcached.test.ts`         | 10     | ✅ 全部通过 | Memcached 适配器完整测试                                 |
-| `mongodb.test.ts`           | 15     | ✅ 全部通过 | MongoDB 适配器完整测试（含 4 项聚合管道优化 + afterAll） |
-| `performance.test.ts`       | 7      | ✅ 全部通过 | 性能优化测试                                             |
-| `priority.test.ts`          | 4      | ✅ 全部通过 | 任务优先级功能测试                                       |
-| `queue-manager.test.ts`     | 24     | ✅ 全部通过 | QueueManager 完整功能（含 12 项 ServiceContainer 集成）  |
-| `queue.test.ts`             | 12     | ✅ 全部通过 | Queue 类完整功能                                         |
-| `rabbitmq.test.ts`          | 11     | ✅ 全部通过 | RabbitMQ 适配器完整测试（含 afterAll）                   |
-| `redis.test.ts`             | 13     | ✅ 全部通过 | Redis 适配器完整测试（含 3 项 MGET 批量优化测试）        |
+### 单元测试文件（CI）
+
+| 测试文件                    | 用例数 | 状态        | 说明                                                  |
+| --------------------------- | ------ | ----------- | ----------------------------------------------------- |
+| `adapter-interface.test.ts` | 7      | ✅ 全部通过 | 适配器接口完整功能测试                                |
+| `delay.test.ts`             | 4      | ✅ 全部通过 | 延迟任务功能测试                                      |
+| `mod.test.ts`               | 3      | ✅ 全部通过 | MemoryQueueAdapter 基础功能                           |
+| `performance.test.ts`       | 6      | ✅ 全部通过 | 性能优化测试                                          |
+| `priority.test.ts`          | 3      | ✅ 全部通过 | 任务优先级功能测试                                    |
+| `queue-manager.test.ts`     | 23     | ✅ 全部通过 | QueueManager 完整功能（含 ServiceContainer 集成）     |
+| `queue.test.ts`             | 11     | ✅ 全部通过 | Queue 类完整功能                                      |
+
+### 集成测试文件（仅本地，需要 Docker 服务）
+
+| 测试文件             | 用例数 | 说明                        |
+| -------------------- | ------ | --------------------------- |
+| `memcached.test.ts`  | 9      | Memcached 适配器完整测试    |
+| `mongodb.test.ts`    | 13     | MongoDB 适配器完整测试      |
+| `rabbitmq.test.ts`   | 9      | RabbitMQ 适配器完整测试     |
+| `redis.test.ts`      | 12     | Redis 适配器完整测试        |
 
 ## 功能测试详情
 

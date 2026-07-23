@@ -1,13 +1,13 @@
 # @dreamer/queue
 
-> 一个兼容 Deno 和 Bun
+> 一个兼容 Deno、Bun 和 Node.js
 > 的队列和任务调度包，提供任务队列、任务调度、并发控制等功能
 
 [English](../../README.md) | 中文 (Chinese)
 
 [![JSR](https://jsr.io/badges/@dreamer/queue)](https://jsr.io/@dreamer/queue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-100%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-57%20passed%20(三端)-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -19,20 +19,40 @@
 
 ## 📦 安装
 
+### Deno
+
 ```bash
 deno add jsr:@dreamer/queue
 ```
+
+### Bun
+
+```bash
+bunx jsr add @dreamer/queue
+```
+
+### Node.js
+
+```bash
+npx jsr add @dreamer/queue
+```
+
+> 需要 Node.js 22+。使用 Node 22+ 全局已提供的 `fetch` / `crypto.subtle` /
+> `AbortController`。外部适配器（Redis/MongoDB/RabbitMQ/Memcached）在
+> `connect()` 时动态 `import()` 对应 npm 包，按需安装即可（如
+> `npm install redis`）。
 
 ---
 
 ## 🌍 环境兼容性
 
-| 环境   | 支持情况 | 说明                       |
-| ------ | -------- | -------------------------- |
-| Deno   | ✅       | Deno 2.6+                  |
-| Bun    | ✅       | Bun 1.3.5+                 |
-| 服务端 | ✅       | 兼容 Deno 和 Bun 运行时    |
-| 客户端 | ❌       | 浏览器环境无法运行任务队列 |
+| 环境     | 支持情况 | 说明                                  |
+| -------- | -------- | ------------------------------------- |
+| Deno     | ✅       | Deno 2.9+                             |
+| Bun      | ✅       | Bun 1.3+                              |
+| Node.js  | ✅       | Node.js 22+（自 v1.1.0 起）           |
+| 服务端   | ✅       | 兼容 Deno、Bun 和 Node.js 运行时      |
+| 客户端   | ❌       | 浏览器环境无法运行任务队列            |
 
 **依赖说明**：
 
@@ -322,6 +342,10 @@ const adapter = new MemcachedQueueAdapter({
 
 ## 📋 变更日志
 
+**v1.1.0** (2026-07-23) - Node.js 22+ 兼容；适配器懒加载 npm 依赖
+（Redis/MongoDB/RabbitMQ）；9 作业 CI 矩阵（Deno/Bun/Node ×
+Linux/macOS/Windows）；单元/集成测试拆分；依赖升级。
+
 **v1.0.1** (2026-02-19) -
 文档结构调整（`docs/en-US`、`docs/zh-CN`），TEST_REPORT
 完整中文版，测试报告更新为 113 项测试，适配器与管理器错误文案
@@ -333,13 +357,14 @@ i18n（en-US、zh-CN）。
 
 ## 📊 测试报告
 
-| 项目     | 结果       |
-| -------- | ---------- |
-| 测试总数 | 113        |
-| 通过     | 113 ✅     |
-| 失败     | 0          |
-| 通过率   | 100%       |
-| 测试时间 | 2026-02-19 |
+| 项目       | 结果       |
+| ---------- | ---------- |
+| Deno 测试  | 64 ✅      |
+| Bun 测试   | 57 ✅      |
+| Node 测试  | 57 ✅      |
+| 失败       | 0          |
+| 通过率     | 100%       |
+| 测试时间   | 2026-07-23 |
 
 详细测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)。
 

@@ -9,6 +9,44 @@
 
 ---
 
+## [1.1.0] - 2026-07-23
+
+### 新增
+
+- **Node.js 22+ 兼容**：全面支持三端运行时（Deno、Bun、Node.js）。单元测试
+  在三端均通过（Bun/Node 各 57 项，Deno 64 项）。
+- **CI**：9 作业矩阵（Deno/Bun/Node × Linux/macOS/Windows），每次向 `dev`
+  分支 push/PR 时运行单元测试。
+- **配置**：新增 `tsconfig.json`、`package.json`（含 `test:node` 脚本
+  `tsx --test --test-force-exit`）、`engines.node >= 22`、
+  `minimumDependencyAge`。
+- **文档**：README（中英文）新增 Node.js 22+ 安装说明与兼容性表格。
+
+### 变更
+
+- **懒加载 npm 依赖**：Redis、MongoDB、RabbitMQ 适配器改为在 `connect()`
+  内动态 `import()` npm 包，而非顶层静态导入。这样仅使用
+  MemoryQueueAdapter 时不会提前加载 `mongodb`→`bson` / `redis` /
+  `amqplib`，修复了 Bun 模块加载失败问题并提升启动性能。
+  （Memcached 适配器已采用此模式。）
+- **测试拆分**：单元测试（MemoryQueueAdapter，无外部依赖）与集成测试
+  （memcached/mongodb/rabbitmq/redis，需要 Docker 服务）分离。CI 仅运行
+  单元测试；`deno task test:integration` 在本地运行外部服务测试。
+- **依赖升级**：`@dreamer/i18n` ^1.1.2、`@dreamer/test` ^1.2.3、
+  `@dreamer/service` ^1.1.0、`@dreamer/runtime-adapter` ^1.2.2。
+- **npm install**：使用 `--force` 标志绕过 `@redis/test-utils` 404 错误
+  （`@redis/client` 的一个不存在的 devDependency，运行时不需要）。
+
+### 兼容性
+
+- Deno 2.9+
+- Bun 1.3+
+- Node.js 22+（自 v1.1.0 起）
+- Redis（Redis 适配器）、Memcached（Memcached 适配器）、MongoDB（MongoDB
+  适配器）、RabbitMQ（RabbitMQ 适配器）
+
+---
+
 ## [1.0.1] - 2026-02-19
 
 ### 新增

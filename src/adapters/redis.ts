@@ -6,9 +6,8 @@
  * 使用 Redis 作为任务存储后端，支持任务持久化和故障恢复。
  */
 
-import { createClient } from "redis";
-import type { Job, JobPriority, QueueAdapter } from "./base.ts";
 import { $tr } from "../i18n.ts";
+import type { Job, JobPriority, QueueAdapter } from "./base.ts";
 
 /**
  * Redis 连接配置
@@ -130,7 +129,8 @@ export class RedisQueueAdapter implements QueueAdapter {
   async connect(): Promise<void> {
     if (this.connectionConfig && !this.internalClient) {
       try {
-        // 使用静态导入的 createClient（已在文件顶部导入）
+        // 动态导入 redis（npm 包），避免模块加载阶段拉入 redis 依赖
+        const { createClient } = await import("redis");
 
         // 构建连接配置
         const clientOptions: any = {};
